@@ -66,27 +66,81 @@ func (c *Curve) buildParCurve() map[time.Time]float64 {
 
 func (c *Curve) bootstrapDF() map[time.Time]float64 {
 	df := make(map[time.Time]float64)
-	parCurve := c.parRates
 	dates := c.pymtDates
-	prev := dates[0]
-	df[prev] = 1.0
-	numerator := 0.0
-	for i, d := range dates[1:] {
-		r := parCurve[d]
-		if i == 0 {
-			numerator = 1
-		} else {
-			prev2 := dates[0]
-			for _, d2 := range dates[1 : i+1] {
-				numerator += utils.Days(prev2, d2) * df[d2]
-				prev2 = d2
-			}
-			numerator = 1 - (numerator/365.0)*r
+
+	// First pillar at settlement has DF = 1.0
+	df[dates[0]] = 1.0
+
+	// Only bootstrap dates that have explicit par quotes (quoted tenors)
+	dateToTenor := c.paymentDatesToTenor()
+	quotedDates := []time.Time{dates[0]}
+	for _, d := range dates[1:] {
+		tenor := dateToTenor[d]
+		if _, ok := c.parQuotes[tenor]; ok {
+			quotedDates = append(quotedDates, d)
 		}
-		df[d] = utils.RoundTo(numerator/(1+r*utils.Days(prev, d)/365.0), 12)
-		prev = d
-		numerator = 0
 	}
+
+	// Bootstrap each quoted pillar sequentially
+	// For OIS: par swap equation is: 1 = sum(DF_i * alpha_i * r) + DF_n
+	// Rearranged: DF_n = (1 - sum(DF_i * alpha_i * r)) / (1 + r * alpha_n)
+
+	for i := 1; i < len(quotedDates); i++ {
+		maturity := quotedDates[i]
+		parRate := c.parRates[maturity]
+
+		// Sum of previous coupon PVs: sum(DF_i * alpha_i * r)
+		sumCouponPV := 0.0
+		prev := quotedDates[0]
+		for j := 1; j < i; j++ {
+			curr := quotedDates[j]
+			accrual := utils.Days(prev, curr) / 365.0
+			sumCouponPV += df[curr] * accrual * parRate
+			prev = curr
+		}
+
+		// Last period accrual
+		lastAccrual := utils.Days(quotedDates[i-1], maturity) / 365.0
+
+		// Solve: 1 = sumCouponPV + DF_n * (1 + r * alpha_n)
+		// DF_n = (1 - sumCouponPV) / (1 + r * alpha_n)
+		numerator := 1.0 - sumCouponPV
+		denominator := 1.0 + parRate * lastAccrual
+		df[maturity] = utils.RoundTo(numerator / denominator, 12)
+	}
+
+	// Interpolate DFs for all other payment dates using step-forward (log-linear)
+	for _, d := range dates {
+		if _, ok := df[d]; !ok {
+			// Find adjacent quoted dates
+			var d1, d2 time.Time
+			for j := 0; j < len(quotedDates)-1; j++ {
+				if quotedDates[j].Before(d) && (d.Before(quotedDates[j+1]) || d.Equal(quotedDates[j+1])) {
+					d1 = quotedDates[j]
+					d2 = quotedDates[j+1]
+					break
+				}
+			}
+
+			// Handle dates beyond the last quoted date - use flat extrapolation
+			if d1.IsZero() && !d.Before(quotedDates[len(quotedDates)-1]) {
+				lastQuoted := quotedDates[len(quotedDates)-1]
+				df[d] = df[lastQuoted]
+				continue
+			}
+
+			if !d1.IsZero() && !d2.IsZero() {
+				df1 := df[d1]
+				df2 := df[d2]
+				t1 := utils.Days(c.settlement, d1) / 365.0
+				t2 := utils.Days(c.settlement, d2) / 365.0
+				tTarget := utils.Days(c.settlement, d) / 365.0
+				forwardRate := math.Log(df1/df2) / (t2 - t1)
+				df[d] = utils.RoundTo(df1 * math.Exp(-forwardRate*(tTarget-t1)), 12)
+			}
+		}
+	}
+
 	return df
 }
 
@@ -106,13 +160,11 @@ func (c *Curve) buildZero() map[time.Time]float64 {
 
 func (c *Curve) paymentDatesToTenor() map[time.Time]float64 {
 	m := make(map[time.Time]float64)
-	date := c.pymtDates[0]
-	term := 0.0
-	termination := c.pymtDates[len(c.pymtDates)-1].AddDate(0, 0, 1)
-	for date.Before(termination) {
-		m[calendar.Adjust(c.cal, date)] = term
-		date = date.AddDate(0, c.freqMonths, 0)
-		term += float64(c.freqMonths) / 12.0
+	for i, d := range c.pymtDates {
+		// Calculate tenor directly from index to avoid floating point accumulation errors
+		months := i * c.freqMonths
+		tenor := float64(months) / 12.0
+		m[d] = tenor
 	}
 	return m
 }

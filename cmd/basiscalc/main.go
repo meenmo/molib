@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"time"
 
@@ -10,13 +11,31 @@ import (
 )
 
 func main() {
-	runBGNEUR()
-	runBGNTibor()
-	runLCHEUR()
+	// Parse command line arguments
+	dateStr := flag.String("date", "", "Curve date in YYYYMMDD format (e.g., 20251121)")
+	flag.Parse()
+
+	// Parse date if provided, otherwise use default
+	var curveDate time.Time
+	if *dateStr != "" {
+		parsedDate, err := time.Parse("20060102", *dateStr)
+		if err != nil {
+			fmt.Printf("Error parsing date '%s': %v\n", *dateStr, err)
+			fmt.Println("Date must be in YYYYMMDD format (e.g., 20251121)")
+			return
+		}
+		curveDate = parsedDate
+	} else {
+		// Default date if not specified
+		curveDate = time.Date(2025, 11, 21, 0, 0, 0, 0, time.UTC)
+	}
+
+	runBGNEUR(curveDate)
+	runBGNTibor(curveDate)
+	runLCHEUR(curveDate)
 }
 
-func runBGNEUR() {
-	curveDate := time.Date(2025, 11, 21, 0, 0, 0, 0, time.UTC)
+func runBGNEUR(curveDate time.Time) {
 	tenorPairs := [][2]int{{10, 10}, {10, 20}}
 	for _, tp := range tenorPairs {
 		spread, pv := basis.CalculateSpread(
@@ -35,8 +54,7 @@ func runBGNEUR() {
 	}
 }
 
-func runBGNTibor() {
-	curveDate := time.Date(2025, 11, 21, 0, 0, 0, 0, time.UTC)
+func runBGNTibor(curveDate time.Time) {
 	tenorPairs := [][2]int{{1, 4}, {2, 3}}
 	for _, tp := range tenorPairs {
 		spread, pv := basis.CalculateSpread(
@@ -55,8 +73,7 @@ func runBGNTibor() {
 	}
 }
 
-func runLCHEUR() {
-	curveDate := time.Date(2025, 11, 20, 0, 0, 0, 0, time.UTC)
+func runLCHEUR(curveDate time.Time) {
 	tenorPairs := [][2]int{{10, 10}, {10, 20}}
 	for _, tp := range tenorPairs {
 		spread, pv := basis.CalculateSpread(

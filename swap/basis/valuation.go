@@ -4,6 +4,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/meenmo/molib/calendar"
 	"github.com/meenmo/molib/swap/benchmark"
 	"github.com/meenmo/molib/utils"
 )
@@ -19,7 +20,26 @@ type SwapPV struct {
 	TotalPV  float64
 }
 
-// forward from projection curve between accrual start/end.
+// forwardRateTenorAligned calculates IBOR forward using tenor end date
+func forwardRateTenorAligned(proj *Curve, start time.Time, leg benchmark.LegConvention,
+	dayCount string) float64 {
+	// Calculate tenor end from start
+	tenorMonths := int(leg.PayFrequency)
+	tenorEnd := start.AddDate(0, tenorMonths, 0)
+	tenorEnd = calendar.Adjust(leg.Calendar, tenorEnd)
+
+	dfStart := proj.DF(start)
+	dfEndTenor := proj.DF(tenorEnd)
+
+	alphaTenor := utils.YearFraction(start, tenorEnd, dayCount)
+	if alphaTenor == 0 {
+		return 0
+	}
+
+	return (dfStart/dfEndTenor - 1.0) / alphaTenor
+}
+
+// forwardRate kept for OIS legs (no tenor alignment needed)
 func forwardRate(proj *Curve, start, end time.Time, dayCount string) float64 {
 	dfStart := proj.DF(start)
 	dfEnd := proj.DF(end)
@@ -39,7 +59,17 @@ func priceLeg(spec benchmark.SwapSpec, leg benchmark.LegConvention, proj *Curve,
 			continue
 		}
 		accrual := utils.YearFraction(p.AccrualStart, p.AccrualEnd, string(leg.DayCount))
-		fwd := forwardRate(proj, p.AccrualStart, p.AccrualEnd, string(leg.DayCount))
+
+		// Use tenor-aligned forward for IBOR legs
+		var fwd float64
+		if leg.ReferenceRate == benchmark.EURIBOR3M || leg.ReferenceRate == benchmark.EURIBOR6M ||
+			leg.ReferenceRate == benchmark.TIBOR3M || leg.ReferenceRate == benchmark.TIBOR6M {
+			fwd = forwardRateTenorAligned(proj, p.AccrualStart, leg, string(leg.DayCount))
+		} else {
+			// OIS legs use simple forward
+			fwd = forwardRate(proj, p.AccrualStart, p.AccrualEnd, string(leg.DayCount))
+		}
+
 		rate := fwd + spread
 		payment := spec.Notional * accrual * rate
 		sign := 1.0

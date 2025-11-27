@@ -14,7 +14,10 @@ func CalculateSpread(curveDate time.Time, forwardTenorYears int, swapTenorYears 
 	effective := calendar.AddYearsWithRoll(oisLeg.Calendar, spot, forwardTenorYears)
 	maturity := calendar.AddYearsWithRoll(oisLeg.Calendar, effective, swapTenorYears)
 
+	// Build OIS discount curve (single-curve is correct for OIS)
 	discCurve := BuildCurve(curveDate, oisQuotes, oisLeg.Calendar, 1)
+
+	// Build IBOR projection curves (temporarily using single-curve for testing)
 	projPay := BuildCurve(curveDate, payQuotes, payLeg.Calendar, int(payLeg.PayFrequency))
 	projRec := BuildCurve(curveDate, recQuotes, recLeg.Calendar, int(recLeg.PayFrequency))
 
