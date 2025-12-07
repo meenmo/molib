@@ -10,7 +10,7 @@ import (
 
 func (irs InterestRateSwap) legCashflows(curve *Curve) (map[time.Time]float64, map[time.Time]float64) {
 	fixed := make(map[time.Time]float64)
-	float := make(map[time.Time]float64)
+	floating := make(map[time.Time]float64)
 
 	isFirst := true
 	var df, prevDf float64
@@ -49,13 +49,13 @@ func (irs InterestRateSwap) legCashflows(curve *Curve) (map[time.Time]float64, m
 
 			dayCountFrac := utils.Days(prevPayDate, payDate) / 365
 			fixed[payDate] = (irs.FixedRate / 100) * irs.Notional * dayCountFrac
-			float[payDate] = floatRate * irs.Notional * dayCountFrac
+			floating[payDate] = floatRate * irs.Notional * dayCountFrac
 
 			prevDf = df
 			prevPayDate = payDate
 		}
 	}
-	return fixed, float
+	return fixed, floating
 }
 
 func (irs InterestRateSwap) discountCashflows(cfs map[time.Time]float64, curve *Curve) map[time.Time]float64 {
@@ -68,24 +68,24 @@ func (irs InterestRateSwap) discountCashflows(cfs map[time.Time]float64, curve *
 }
 
 func (irs InterestRateSwap) PVByLeg(curve *Curve) (float64, float64) {
-	fixedCF, floatCF := irs.legCashflows(curve)
+	fixedCF, floatingCF := irs.legCashflows(curve)
 	pvFixed := irs.discountCashflows(fixedCF, curve)
-	pvFloat := irs.discountCashflows(floatCF, curve)
+	pvFloating := irs.discountCashflows(floatingCF, curve)
 
-	var sumFixed, sumFloat float64
+	var sumFixed, sumFloating float64
 	for _, pv := range pvFixed {
 		sumFixed += pv
 	}
-	for _, pv := range pvFloat {
-		sumFloat += pv
+	for _, pv := range pvFloating {
+		sumFloating += pv
 	}
-	return sumFixed, sumFloat
+	return sumFixed, sumFloating
 }
 
 func (irs InterestRateSwap) NPV(curve *Curve) float64 {
-	sumFixed, sumFloat := irs.PVByLeg(curve)
+	sumFixed, sumFloating := irs.PVByLeg(curve)
 	if strings.ToUpper(string(irs.Direction)) == "REC" {
-		return sumFixed - sumFloat
+		return sumFixed - sumFloating
 	}
-	return sumFloat - sumFixed
+	return sumFloating - sumFixed
 }

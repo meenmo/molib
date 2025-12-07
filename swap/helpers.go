@@ -9,12 +9,12 @@ import (
 // paymentDatesToTenors converts payment dates to fractional year tenors (0, 0.25, ...).
 func paymentDatesToTenors(dates []time.Time) map[time.Time]float64 {
 	tenorMap := make(map[time.Time]float64)
-	pymtDate := dates[0]
+	paymentDate := dates[0]
 	termination := dates[len(dates)-1].AddDate(0, 0, 1)
 
-	for i := 0.0; pymtDate.Before(termination); i++ {
-		tenorMap[modifiedFollowing(pymtDate)] = i * 0.25
-		pymtDate = pymtDate.AddDate(0, 3, 0)
+	for i := 0.0; paymentDate.Before(termination); i++ {
+		tenorMap[modifiedFollowing(paymentDate)] = i * 0.25
+		paymentDate = paymentDate.AddDate(0, 3, 0)
 	}
 	return tenorMap
 }
