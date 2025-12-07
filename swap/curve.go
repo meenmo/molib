@@ -17,38 +17,38 @@ type Curve struct {
 }
 
 func BootstrapCurve(settlementDate string, quotes ParSwapQuotes) *Curve {
-	crv := &Curve{
+	curve := &Curve{
 		settlementDate: utils.DateParser(settlementDate),
 		swapQuotes:     quotes,
 	}
 
-	crv.paymentDates = crv.generatePaymentDates()
-	crv.parCurve = crv.buildSwapCurve()
-	crv.discountFactors = crv.buildDiscountFactors()
-	crv.zeroRates = crv.buildZeroCurve()
-	return crv
+	curve.paymentDates = curve.generatePaymentDates()
+	curve.parCurve = curve.buildSwapCurve()
+	curve.discountFactors = curve.buildDiscountFactors()
+	curve.zeroRates = curve.buildZeroCurve()
+	return curve
 }
 
 func (crv Curve) generatePaymentDates() []time.Time {
 	dates := make([]time.Time, 0, 81)
 	for i := 0; i <= 80; i++ {
-		pymtDate := crv.settlementDate.AddDate(0, 3*i, 0)
-		dates = append(dates, modifiedFollowing(pymtDate))
+		paymentDate := crv.settlementDate.AddDate(0, 3*i, 0)
+		dates = append(dates, modifiedFollowing(paymentDate))
 	}
 	return dates
 }
 
 func (crv Curve) buildSwapCurve() map[time.Time]float64 {
 	swap := make(map[time.Time]float64)
-	pymtDates := crv.paymentDates
-	dateToTenor := paymentDatesToTenors(pymtDates)
+	paymentDates := crv.paymentDates
+	dateToTenor := paymentDatesToTenors(paymentDates)
 
-	for _, d := range pymtDates {
+	for _, d := range paymentDates {
 		tenor := dateToTenor[d]
 		if rate, ok := crv.swapQuotes[tenor]; ok {
 			swap[d] = rate / 100
 		} else {
-			d1, d2 := adjacentQuotedDates(d, pymtDates, crv.swapQuotes)
+			d1, d2 := adjacentQuotedDates(d, paymentDates, crv.swapQuotes)
 			r1 := crv.swapQuotes[dateToTenor[d1]]
 			r2 := crv.swapQuotes[dateToTenor[d2]]
 			swap[d] = (r1 + (r2-r1)*utils.Days(d1, d)/utils.Days(d1, d2)) / 100
@@ -60,19 +60,19 @@ func (crv Curve) buildSwapCurve() map[time.Time]float64 {
 func (crv Curve) buildDiscountFactors() map[time.Time]float64 {
 	df := make(map[time.Time]float64)
 	swapCurve := crv.parCurve
-	pymtDates := crv.paymentDates
+	paymentDates := crv.paymentDates
 
-	prevDate := pymtDates[0]
+	prevDate := paymentDates[0]
 	numerator := 0.0
 	df[prevDate] = 1
 
-	for i, date := range pymtDates[1:] {
+	for i, date := range paymentDates[1:] {
 		rate := swapCurve[date]
 		if i == 0 {
 			numerator = 1
 		} else {
-			prevDate2 := pymtDates[0]
-			for _, d := range pymtDates[1 : i+1] {
+			prevDate2 := paymentDates[0]
+			for _, d := range paymentDates[1 : i+1] {
 				numerator += utils.Days(prevDate2, d) * df[d]
 				prevDate2 = d
 			}
