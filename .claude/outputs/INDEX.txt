@@ -1,0 +1,57 @@
+================================================================================
+CLAUDE CODE OUTPUTS - DOCUMENT INDEX
+================================================================================
+
+This directory contains analysis, investigation logs, and reports generated
+by Claude Code. Documents are numbered with format: YYYYMMDD_NN_description.txt
+
+Latest documents appear at the bottom of this index.
+
+================================================================================
+DECEMBER 4, 2025 - BASIS SWAP PRICING INVESTIGATION
+================================================================================
+
+20251204_01_curve_versioning_analysis.txt
+-------------------------------------------
+SUMMARY: Comprehensive analysis of pricing accuracy issue
+CONTENT:
+  - T+2 spot convention fix (97% error reduction)
+  - Oct 31 validation results (0.07 bp accuracy)
+  - Jan 6 curve versioning issue identification
+  - Root cause: marketdata.curves doesn't preserve historical snapshots
+  - Production readiness assessment and recommendations
+
+20251204_02_investigation_log.txt
+----------------------------------
+SUMMARY: Chronological investigation timeline
+CONTENT:
+  - Phase 1: T+2 fix discovery and validation
+  - Phase 2: Mass testing across 236 dates
+  - Phase 3: Historical date analysis (Jan 6)
+  - Key finding: Retrospective pricing used different curve data
+  - Files modified, learnings, and next steps
+
+20251204_03_test_results_comparison.txt
+----------------------------------------
+SUMMARY: Side-by-side test case comparison
+CONTENT:
+  - Oct 31 test results (success case)
+  - Jan 6 test results (curve mismatch case)
+  - Same algorithm, different curves → different results
+  - Validation conclusion and recommendations
+  - Raw test output and Bloomberg reference values
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+Algorithm Status:     ✅ PRODUCTION-READY
+Accuracy (current):   < 0.1 bp vs Bloomberg SWPM
+Accuracy (historical): Limited by curve data availability
+Key Fix:              T+2 spot date convention
+Key Issue:            Curve data versioning for historical dates
+
+Latest Document: #20251204-03
+Total Documents: 3
+
+================================================================================

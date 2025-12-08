@@ -5,6 +5,7 @@ import (
 
 	"github.com/meenmo/molib/calendar"
 	"github.com/meenmo/molib/swap/benchmark"
+	"github.com/meenmo/molib/utils"
 )
 
 type Period struct {
@@ -19,7 +20,12 @@ func buildSchedule(effective, maturity time.Time, leg benchmark.LegConvention) [
 	months := int(leg.PayFrequency)
 	start := effective
 	for {
-		next := start.AddDate(0, months, 0)
+		var next time.Time
+		if leg.RollConvention == benchmark.BackwardEOM {
+			next = utils.AddMonth(start, months)
+		} else {
+			next = start.AddDate(0, months, 0)
+		}
 		if next.After(maturity.AddDate(0, 0, 1)) {
 			break
 		}

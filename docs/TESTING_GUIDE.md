@@ -176,11 +176,11 @@ from datetime import date
 from ficclib.swap.basis.pricing import calculate_basis_swap_spread
 from ficclib.data.curves import load_curves
 
-curve_date = date(2025, 11, 21)
-curves = load_curves(curve_date, source='BGN', currency='EUR')
+date = date(2025, 11, 21)
+curves = load_curves(date, source='BGN', currency='EUR')
 
 spread = calculate_basis_swap_spread(
-    curve_date=curve_date,
+    date=date,
     forward_years=10,
     tenor_years=10,
     curves=curves,

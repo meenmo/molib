@@ -179,10 +179,10 @@ Check what dates are available in the database:
 ```bash
 # List recent dates with BGN EUR data
 PGPASSWORD='04201' psql -h 100.127.72.74 -p 1013 -U meenmo -d ficc -c "
-SELECT DISTINCT curve_date
+SELECT DISTINCT date
 FROM marketdata.curves
 WHERE source='BGN' AND reference_index='ESTR'
-ORDER BY curve_date DESC
+ORDER BY date DESC
 LIMIT 20;
 "
 
@@ -190,7 +190,7 @@ LIMIT 20;
 PGPASSWORD='04201' psql -h 100.127.72.74 -p 1013 -U meenmo -d ficc -c "
 SELECT DISTINCT source, reference_index
 FROM marketdata.curves
-WHERE curve_date='2025-11-25'
+WHERE date='2025-11-25'
 ORDER BY source, reference_index;
 "
 ```
@@ -276,9 +276,9 @@ uv pip install psycopg2-binary
 
 ```bash
 PGPASSWORD='04201' psql -h 100.127.72.74 -p 1013 -U meenmo -d ficc -c "
-SELECT curve_date, source, reference_index, jsonb_array_length(quotes) as num_quotes
+SELECT date, source, reference_index, jsonb_array_length(quotes) as num_quotes
 FROM marketdata.curves
-WHERE curve_date='2025-11-25'
+WHERE date='2025-11-25'
   AND source='BGN';
 "
 ```
@@ -314,10 +314,10 @@ cd /Users/meenmo/Documents/workspace/molib
 
 # 1. Find available dates
 PGPASSWORD='04201' psql -h 100.127.72.74 -p 1013 -U meenmo -d ficc -c "
-SELECT DISTINCT curve_date
+SELECT DISTINCT date
 FROM marketdata.curves
-WHERE source='BGN' AND curve_date >= '2025-11-01'
-ORDER BY curve_date DESC
+WHERE source='BGN' AND date >= '2025-11-01'
+ORDER BY date DESC
 LIMIT 10;
 "
 

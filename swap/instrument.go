@@ -1,6 +1,6 @@
 package swap
 
-import "github.com/meenmo/molib/marketdata/krx"
+import "github.com/meenmo/molib/calendar"
 
 // Position describes whether the swap receives or pays the fixed leg.
 type Position string
@@ -22,5 +22,5 @@ type InterestRateSwap struct {
 	Notional        float64
 	Direction       Position
 	SwapQuotes      ParSwapQuotes
-	ReferenceRate   krx.ReferenceRateFeed
+	ReferenceRate   calendar.ReferenceRateFeed
 }

@@ -10,5 +10,6 @@ const (
 	TONAR     ReferenceRate = "TONAR"
 	TIBOR3M   ReferenceRate = "TIBOR3M"
 	TIBOR6M   ReferenceRate = "TIBOR6M"
+	SOFR      ReferenceRate = "SOFR"
 	CD91      ReferenceRate = "CD91"
 )

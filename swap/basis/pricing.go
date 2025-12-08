@@ -9,17 +9,26 @@ import (
 
 // CalculateSpread builds curves and solves for receive-leg spread.
 func CalculateSpread(curveDate time.Time, forwardTenorYears int, swapTenorYears int, payLeg benchmark.LegConvention, recLeg benchmark.LegConvention, oisLeg benchmark.LegConvention, oisQuotes map[string]float64, payQuotes map[string]float64, recQuotes map[string]float64, notional float64) (float64, SwapPV) {
-	tradeDate := curveDate
-	spot := calendar.AddBusinessDays(oisLeg.Calendar, tradeDate, 2)
-	effective := calendar.AddYearsWithRoll(oisLeg.Calendar, spot, forwardTenorYears)
-	maturity := calendar.AddYearsWithRoll(oisLeg.Calendar, effective, swapTenorYears)
+	// Apply T+2 spot convention
+	spotDate := calendar.AddBusinessDays(oisLeg.Calendar, curveDate, 2)
+
+	// Calculate effective date from spot (not trade date)
+	var effective time.Time
+	if forwardTenorYears > 0 {
+		unadjEff := spotDate.AddDate(forwardTenorYears, 0, 0)
+		effective = calendar.AdjustFollowing(oisLeg.Calendar, unadjEff)
+	} else {
+		effective = spotDate
+	}
+	unadjMat := effective.AddDate(swapTenorYears, 0, 0)
+	maturity := calendar.AdjustFollowing(oisLeg.Calendar, unadjMat)
 
 	// Build OIS discount curve (single-curve is correct for OIS)
 	discCurve := BuildCurve(curveDate, oisQuotes, oisLeg.Calendar, 1)
 
-	// Build IBOR projection curves (temporarily using single-curve for testing)
-	projPay := BuildCurve(curveDate, payQuotes, payLeg.Calendar, int(payLeg.PayFrequency))
-	projRec := BuildCurve(curveDate, recQuotes, recLeg.Calendar, int(recLeg.PayFrequency))
+	// Build IBOR projection curves using dual-curve bootstrap
+	projPay := BuildDualCurve(curveDate, payQuotes, discCurve, payLeg.Calendar, int(payLeg.PayFrequency))
+	projRec := BuildDualCurve(curveDate, recQuotes, discCurve, recLeg.Calendar, int(recLeg.PayFrequency))
 
 	spec := benchmark.SwapSpec{
 		Notional:       notional,

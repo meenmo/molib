@@ -10,8 +10,7 @@ import (
 )
 
 type LegPV struct {
-	PV       float64
-	Cashflow float64
+	PV float64
 }
 
 type SwapPV struct {

@@ -13,7 +13,7 @@
 │  Table: marketdata.curves                                       │
 │                                                                  │
 │  Columns:                                                        │
-│  - curve_date: date (e.g., '2025-11-21')                        │
+│  - date: date (e.g., '2025-11-21')                        │
 │  - source: text (e.g., 'BGN', 'LCH')                            │
 │  - reference_index: text (e.g., 'ESTR', 'EURIBOR3M')            │
 │  - quotes: jsonb (e.g., {"1Y": 1.8916, "2Y": 1.912, ...})       │
@@ -90,7 +90,7 @@
 **Source**: Extracted from database on 2025-11-26
 ```sql
 SELECT quotes FROM marketdata.curves
-WHERE curve_date='2025-11-21'
+WHERE date='2025-11-21'
   AND source='BGN'
   AND reference_index='ESTR';
 ```
@@ -106,7 +106,7 @@ WHERE curve_date='2025-11-21'
 **Source**: Extracted from database on 2025-11-27
 ```sql
 SELECT quotes FROM marketdata.curves
-WHERE curve_date='2025-11-20'
+WHERE date='2025-11-20'
   AND source='LCH'
   AND reference_index='ESTR';
 ```
@@ -151,21 +151,21 @@ var BGNEstr = map[string]float64{
 -- Extract ESTR quotes
 SELECT quotes
 FROM marketdata.curves
-WHERE curve_date='2025-11-25'
+WHERE date='2025-11-25'
   AND source='BGN'
   AND reference_index='ESTR';
 
 -- Extract EURIBOR3M quotes
 SELECT quotes
 FROM marketdata.curves
-WHERE curve_date='2025-11-25'
+WHERE date='2025-11-25'
   AND source='BGN'
   AND reference_index='EURIBOR3M';
 
 -- Extract EURIBOR6M quotes
 SELECT quotes
 FROM marketdata.curves
-WHERE curve_date='2025-11-25'
+WHERE date='2025-11-25'
   AND source='BGN'
   AND reference_index='EURIBOR6M';
 ```
@@ -254,10 +254,10 @@ To verify where your data came from:
 ```bash
 # Check what dates are available
 PGPASSWORD='04201' psql -h 100.127.72.74 -p 1013 -U meenmo -d ficc -c "
-SELECT DISTINCT curve_date
+SELECT DISTINCT date
 FROM marketdata.curves
 WHERE source='BGN' AND reference_index='ESTR'
-ORDER BY curve_date DESC
+ORDER BY date DESC
 LIMIT 10;
 "
 
@@ -265,7 +265,7 @@ LIMIT 10;
 PGPASSWORD='04201' psql -h 100.127.72.74 -p 1013 -U meenmo -d ficc -c "
 SELECT DISTINCT source, reference_index
 FROM marketdata.curves
-WHERE curve_date='2025-11-21'
+WHERE date='2025-11-21'
 ORDER BY source, reference_index;
 "
 ```
@@ -277,7 +277,7 @@ ORDER BY source, reference_index;
 PGPASSWORD='04201' psql -h 100.127.72.74 -p 1013 -U meenmo -d ficc -c "
 SELECT quotes->'10Y' as ten_year_rate
 FROM marketdata.curves
-WHERE curve_date='2025-11-21'
+WHERE date='2025-11-21'
   AND source='BGN'
   AND reference_index='ESTR';
 " -t
@@ -308,7 +308,7 @@ curveDate := time.Date(2025, 11, 21, 0, 0, 0, 0, time.UTC)  ← This matters
 ```
 
 **Why?** The curve quotes themselves are just rates - they don't have timestamps. The curve date is used for:
-1. Calculating spot date (curve_date + 2 business days)
+1. Calculating spot date (date + 2 business days)
 2. Generating payment schedules
 3. Date adjustments (business day conventions)
 

@@ -52,7 +52,9 @@ type DayCount string
 
 const (
 	Act360  DayCount = "ACT/360"
+	Act365  DayCount = "ACT/365"
 	Act365F DayCount = "ACT/365F"
+	Dc30360 DayCount = "30/360"
 )
 
 // LegConvention captures standard swap leg settings.

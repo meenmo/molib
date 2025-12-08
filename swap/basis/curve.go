@@ -105,8 +105,8 @@ func (c *Curve) bootstrapDiscountFactors() map[time.Time]float64 {
 		// Solve: 1 = sumCouponPV + DF_n * (1 + r * alpha_n)
 		// DF_n = (1 - sumCouponPV) / (1 + r * alpha_n)
 		numerator := 1.0 - sumCouponPV
-		denominator := 1.0 + parRate * lastAccrual
-		df[maturity] = utils.RoundTo(numerator / denominator, 12)
+		denominator := 1.0 + parRate*lastAccrual
+		df[maturity] = utils.RoundTo(numerator/denominator, 12)
 	}
 
 	// Interpolate DFs for all other payment dates using step-forward (log-linear)
@@ -136,7 +136,7 @@ func (c *Curve) bootstrapDiscountFactors() map[time.Time]float64 {
 				t2 := utils.Days(c.settlement, d2) / 365.0
 				tTarget := utils.Days(c.settlement, d) / 365.0
 				forwardRate := math.Log(df1/df2) / (t2 - t1)
-				df[d] = utils.RoundTo(df1 * math.Exp(-forwardRate*(tTarget-t1)), 12)
+				df[d] = utils.RoundTo(df1*math.Exp(-forwardRate*(tTarget-t1)), 12)
 			}
 		}
 	}
@@ -196,7 +196,6 @@ func (c *Curve) bootstrapDualCurveDiscountFactors(oisCurve *Curve) map[time.Time
 
 		// Solve for pseudo-DF at this maturity using Newton-Raphson
 		px := c.solvePseudoDiscountFactor(quotedDates[:i+1], pseudoDF, oisCurve, parRate)
-
 
 		pseudoDF[maturity] = px
 	}

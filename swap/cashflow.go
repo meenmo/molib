@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/meenmo/molib/calendar"
 	"github.com/meenmo/molib/utils"
 )
 
@@ -25,11 +26,11 @@ func (irs InterestRateSwap) legCashflows(curve *Curve) (map[time.Time]float64, m
 		panic("invalid direction: must be REC or PAY")
 	}
 
-	for i := 0; modifiedFollowing(utils.AddMonth(effective, 3*i)).Before(termination.AddDate(0, 0, 1)); i++ {
-		if isEOM(effective) {
-			payDate = lastBusinessDayOfMonth(utils.AddMonth(effective, 3*i))
+	for i := 0; calendar.Adjust(calendar.KRW, utils.AddMonth(effective, 3*i)).Before(termination.AddDate(0, 0, 1)); i++ {
+		if calendar.IsEndOfMonth(calendar.KRW, effective) {
+			payDate = calendar.LastBusinessDayOfMonth(calendar.KRW, utils.AddMonth(effective, 3*i))
 		} else {
-			payDate = modifiedFollowing(utils.AddMonth(effective, 3*i))
+			payDate = calendar.Adjust(calendar.KRW, utils.AddMonth(effective, 3*i))
 		}
 
 		if payDate.After(settlement) {
@@ -38,7 +39,7 @@ func (irs InterestRateSwap) legCashflows(curve *Curve) (map[time.Time]float64, m
 			if isFirst {
 				isFirst = false
 				prevPayDate = priorPaymentDate(settlement, effective)
-				refRate, ok := irs.ReferenceRate.RateOn(priorBusinessDate(prevPayDate))
+				refRate, ok := irs.ReferenceRate.RateOn(calendar.AddBusinessDays(calendar.KRW, prevPayDate, -1))
 				if !ok {
 					panic("missing reference rate fixing for first period")
 				}

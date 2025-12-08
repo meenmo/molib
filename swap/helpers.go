@@ -3,6 +3,7 @@ package swap
 import (
 	"time"
 
+	"github.com/meenmo/molib/calendar"
 	"github.com/meenmo/molib/utils"
 )
 
@@ -13,7 +14,7 @@ func paymentDatesToTenors(dates []time.Time) map[time.Time]float64 {
 	termination := dates[len(dates)-1].AddDate(0, 0, 1)
 
 	for i := 0.0; paymentDate.Before(termination); i++ {
-		tenorMap[modifiedFollowing(paymentDate)] = i * 0.25
+		tenorMap[calendar.Adjust(calendar.KRW, paymentDate)] = i * 0.25
 		paymentDate = paymentDate.AddDate(0, 3, 0)
 	}
 	return tenorMap
@@ -57,12 +58,12 @@ func adjacentQuotedDates(target time.Time, dates []time.Time, quotes ParSwapQuot
 func priorPaymentDate(settlementDate, effectiveDate time.Time) time.Time {
 	var candidate time.Time
 
-	for i := 0; modifiedFollowing(utils.AddMonth(effectiveDate, 3*i)).Before(settlementDate.AddDate(0, 0, 1)); i++ {
-		candidate = modifiedFollowing(utils.AddMonth(effectiveDate, 3*i))
+	for i := 0; calendar.Adjust(calendar.KRW, utils.AddMonth(effectiveDate, 3*i)).Before(settlementDate.AddDate(0, 0, 1)); i++ {
+		candidate = calendar.Adjust(calendar.KRW, utils.AddMonth(effectiveDate, 3*i))
 	}
 
-	if isEOM(effectiveDate) {
-		return lastBusinessDayOfMonth(candidate)
+	if calendar.IsEndOfMonth(calendar.KRW, effectiveDate) {
+		return calendar.LastBusinessDayOfMonth(calendar.KRW, candidate)
 	}
 	return candidate
 }

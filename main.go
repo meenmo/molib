@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/meenmo/molib/marketdata/krx"
+	"github.com/meenmo/molib/calendar"
 	"github.com/meenmo/molib/swap"
 )
 
@@ -37,7 +37,7 @@ func main() {
 		Notional:        10000000000,
 		Direction:       swap.PositionReceive,
 		SwapQuotes:      quotes,
-		ReferenceRate:   krx.DefaultReferenceFeed(),
+		ReferenceRate:   calendar.DefaultReferenceFeed(),
 	}
 
 	curve := swap.BootstrapCurve(trade.SettlementDate, trade.SwapQuotes)

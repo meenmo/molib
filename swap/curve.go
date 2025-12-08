@@ -4,6 +4,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/meenmo/molib/calendar"
 	"github.com/meenmo/molib/utils"
 )
 
@@ -33,7 +34,7 @@ func (crv Curve) generatePaymentDates() []time.Time {
 	dates := make([]time.Time, 0, 81)
 	for i := 0; i <= 80; i++ {
 		paymentDate := crv.settlementDate.AddDate(0, 3*i, 0)
-		dates = append(dates, modifiedFollowing(paymentDate))
+		dates = append(dates, calendar.Adjust(calendar.KRW, paymentDate))
 	}
 	return dates
 }

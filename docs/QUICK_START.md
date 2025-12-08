@@ -190,7 +190,7 @@ from datetime import date
 from ficclib.swap.basis.pricing import calculate_basis_swap_spread
 
 spread = calculate_basis_swap_spread(
-    curve_date=date(2025, 11, 21),
+    date=date(2025, 11, 21),
     forward_years=10,
     tenor_years=10,
     source='BGN',

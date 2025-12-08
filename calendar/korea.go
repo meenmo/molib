@@ -1,6 +1,9 @@
-package krx
+package calendar
 
-var HolidayCalendar = []string{
+import "time"
+
+// koreaHolidayList contains KRW (Korea Exchange) holidays from 2009-2055.
+var koreaHolidayList = []string{
 	"2009-01-01",
 	"2009-01-26",
 	"2009-01-27",
@@ -670,6 +673,8 @@ var HolidayCalendar = []string{
 	"2055-10-11",
 }
 
+
+// CD91Fixings contains historical CD91 rate fixings.
 var CD91Fixings = map[string]float64{
 	"2025-11-21": 2.76000,
 	"2025-11-20": 2.76000,
@@ -704,4 +709,29 @@ var CD91Fixings = map[string]float64{
 	"2025-10-10": 2.55000,
 	"2025-10-02": 2.55000,
 	"2025-10-01": 2.56000,
+}
+
+// ReferenceRateFeed supplies short-rate fixings (e.g., CD91) for discounting the first floating period.
+type ReferenceRateFeed interface {
+	RateOn(date time.Time) (float64, bool)
+}
+
+// MapReferenceRateFeed is a static map-backed implementation for development/testing.
+type MapReferenceRateFeed struct {
+	rates map[string]float64
+}
+
+// NewMapReferenceRateFeed creates a new map-backed reference rate feed.
+func NewMapReferenceRateFeed(rates map[string]float64) *MapReferenceRateFeed {
+	return &MapReferenceRateFeed{rates: rates}
+}
+
+func (m *MapReferenceRateFeed) RateOn(date time.Time) (float64, bool) {
+	val, ok := m.rates[date.Format("2006-01-02")]
+	return val, ok
+}
+
+// DefaultReferenceFeed builds a map-backed feed using the bundled CD91 fixings.
+func DefaultReferenceFeed() ReferenceRateFeed {
+	return &MapReferenceRateFeed{rates: CD91Fixings}
 }
