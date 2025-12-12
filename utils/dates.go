@@ -3,8 +3,16 @@ package utils
 import (
 	"log"
 	"math"
+	"sort"
 	"time"
 )
+
+// SortDates sorts a slice of time.Time in ascending order.
+func SortDates(dates []time.Time) {
+	sort.Slice(dates, func(i, j int) bool {
+		return dates[i].Before(dates[j])
+	})
+}
 
 // DateParser converts YYYY-MM-DD to time.Time or exits on error.
 func DateParser(strDate string) time.Time {

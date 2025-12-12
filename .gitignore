@@ -1,3 +1,4 @@
-scripts/
 .gocache/
+.vscode/
 db/
+scripts/

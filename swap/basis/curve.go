@@ -17,6 +17,20 @@ type Curve struct {
 	zeros           map[time.Time]float64 // percent
 	cal             calendar.CalendarID
 	freqMonths      int
+	curveDayCount   string
+}
+
+// defaultCurveDayCount selects a time basis for curve construction
+// based on the calendar (i.e., currency).
+func defaultCurveDayCount(cal calendar.CalendarID) string {
+	switch cal {
+	case calendar.JPN:
+		return "ACT/365F"
+	case calendar.TARGET:
+		return "ACT/365F"
+	default:
+		return "ACT/365F"
+	}
 }
 
 // BuildCurve creates a par/zero curve using KRX-like bootstrap with 3M spacing.
@@ -26,16 +40,105 @@ func BuildCurve(settlement time.Time, quotes map[string]float64, cal calendar.Ca
 		parsed[tenorToYears(k)] = v
 	}
 	c := &Curve{
-		settlement: settlement,
-		parQuotes:  parsed,
-		cal:        cal,
-		freqMonths: freqMonths,
+		settlement:    settlement,
+		parQuotes:     parsed,
+		cal:           cal,
+		freqMonths:    freqMonths,
+		curveDayCount: defaultCurveDayCount(cal),
 	}
 	c.paymentDates = c.generatePaymentDates()
 	c.parRates = c.buildParCurve()
 	c.discountFactors = c.bootstrapDiscountFactors()
 	c.zeros = c.buildZero()
 	return c
+}
+
+// NewCurveFromDFs creates a curve from explicitly provided discount factors.
+// This is useful for diagnostics where we want to isolate valuation from bootstrap by injecting
+// exact discount factors from another system (e.g. SWPM).
+func NewCurveFromDFs(settlement time.Time, dfs map[time.Time]float64, cal calendar.CalendarID, freqMonths int) *Curve {
+	c := &Curve{
+		settlement:      settlement,
+		parQuotes:       make(map[float64]float64), // No quotes
+		cal:             cal,
+		freqMonths:      freqMonths,
+		curveDayCount:   defaultCurveDayCount(cal),
+		discountFactors: make(map[time.Time]float64),
+	}
+	
+	// Copy DFs
+	for t, df := range dfs {
+		c.discountFactors[t] = df
+	}
+	
+	// We need paymentDates for interpolation logic in DF() and ZeroRateAt().
+	// In standard BuildCurve, this is a dense monthly grid.
+	// Here, we can either replicate that grid and interpolate the input DFs onto it,
+	// or assume the input DFs *are* the grid.
+	// For safety, let's generate the standard grid and interpolate the input DFs onto it.
+	c.paymentDates = c.generatePaymentDates()
+	
+	// Sort input dates
+	var inputDates []time.Time
+	for t := range dfs {
+		inputDates = append(inputDates, t)
+	}
+	
+	// Efficient sort
+	utils.SortDates(inputDates)
+	// c.paymentDates = inputDates // Use standard grid for now to avoid gaps? 
+	// Actually, using standard grid is safer for interpolation if input is sparse.
+	// We already populated discountFactors from input. 
+	// If the grid points are NOT in input, DF() will panic or return 0?
+	// DF() calls ZeroRateAt() which calls adjacentDates(t, c.paymentDates).
+	// Then it looks up c.zeros[d1].
+	// c.zeros is built from c.discountFactors[d].
+	// So we need c.discountFactors to have entries for ALL c.paymentDates.
+	
+	// Let's populate the grid DFs by interpolating from the input DFs.
+	for _, d := range c.paymentDates {
+		if _, ok := c.discountFactors[d]; !ok {
+			// Interpolate from inputDates
+			c.discountFactors[d] = c.interpolateDF(d, inputDates, dfs)
+		}
+	}
+
+	c.zeros = c.buildZero()
+	return c
+}
+
+func (c *Curve) interpolateDF(t time.Time, sortedPillars []time.Time, dfs map[time.Time]float64) float64 {
+	// Simple log-linear
+	if len(sortedPillars) == 0 { return 1.0 }
+	
+	// Find brackets
+	var d1, d2 time.Time
+	for i := 0; i < len(sortedPillars)-1; i++ {
+		if (sortedPillars[i].Before(t) || sortedPillars[i].Equal(t)) &&
+			(t.Before(sortedPillars[i+1]) || t.Equal(sortedPillars[i+1])) {
+			d1 = sortedPillars[i]
+			d2 = sortedPillars[i+1]
+			break
+		}
+	}
+	
+	if d1.IsZero() {
+		// Extrapolate flat
+		if t.Before(sortedPillars[0]) { return dfs[sortedPillars[0]] }
+		return dfs[sortedPillars[len(sortedPillars)-1]]
+	}
+	
+	df1 := dfs[d1]
+	df2 := dfs[d2]
+	
+	t1 := utils.YearFraction(c.settlement, d1, c.curveDayCount)
+	t2 := utils.YearFraction(c.settlement, d2, c.curveDayCount)
+	tTarget := utils.YearFraction(c.settlement, t, c.curveDayCount)
+	
+	if t2 == t1 { return df1 }
+	
+	forwardRate := math.Log(df1/df2) / (t2 - t1)
+	return df1 * math.Exp(-forwardRate*(tTarget-t1))
 }
 
 func (c *Curve) generatePaymentDates() []time.Time {
@@ -82,31 +185,15 @@ func (c *Curve) bootstrapDiscountFactors() map[time.Time]float64 {
 	}
 
 	// Bootstrap each quoted pillar sequentially
-	// For OIS: par swap equation is: 1 = sum(DF_i * alpha_i * r) + DF_n
-	// Rearranged: DF_n = (1 - sum(DF_i * alpha_i * r)) / (1 + r * alpha_n)
-
 	for i := 1; i < len(quotedDates); i++ {
 		maturity := quotedDates[i]
 		parRate := c.parRates[maturity]
 
-		// Sum of previous coupon PVs: sum(DF_i * alpha_i * r)
-		sumCouponPV := 0.0
-		prev := quotedDates[0]
-		for j := 1; j < i; j++ {
-			curr := quotedDates[j]
-			accrual := utils.Days(prev, curr) / 365.0
-			sumCouponPV += df[curr] * accrual * parRate
-			prev = curr
-		}
+		// Build fixed leg schedule for this maturity
+		coupons := c.buildOISCoupons(maturity)
 
-		// Last period accrual
-		lastAccrual := utils.Days(quotedDates[i-1], maturity) / 365.0
-
-		// Solve: 1 = sumCouponPV + DF_n * (1 + r * alpha_n)
-		// DF_n = (1 - sumCouponPV) / (1 + r * alpha_n)
-		numerator := 1.0 - sumCouponPV
-		denominator := 1.0 + parRate*lastAccrual
-		df[maturity] = utils.RoundTo(numerator/denominator, 12)
+		// Solve for DF(maturity)
+		df[maturity] = c.solveOISDiscountFactor(quotedDates[:i+1], df, coupons, parRate)
 	}
 
 	// Interpolate DFs for all other payment dates using step-forward (log-linear)
@@ -132,9 +219,9 @@ func (c *Curve) bootstrapDiscountFactors() map[time.Time]float64 {
 			if !d1.IsZero() && !d2.IsZero() {
 				df1 := df[d1]
 				df2 := df[d2]
-				t1 := utils.Days(c.settlement, d1) / 365.0
-				t2 := utils.Days(c.settlement, d2) / 365.0
-				tTarget := utils.Days(c.settlement, d) / 365.0
+				t1 := utils.YearFraction(c.settlement, d1, c.curveDayCount)
+				t2 := utils.YearFraction(c.settlement, d2, c.curveDayCount)
+				tTarget := utils.YearFraction(c.settlement, d, c.curveDayCount)
 				forwardRate := math.Log(df1/df2) / (t2 - t1)
 				df[d] = utils.RoundTo(df1*math.Exp(-forwardRate*(tTarget-t1)), 12)
 			}
@@ -142,6 +229,189 @@ func (c *Curve) bootstrapDiscountFactors() map[time.Time]float64 {
 	}
 
 	return df
+}
+
+type oisCoupon struct {
+	PaymentDate time.Time
+	Accrual     float64
+}
+
+// buildOISCoupons generates fixed leg coupons for an OIS from settlement to maturity.
+// It assumes annual coupons (common for TONAR/ESTR) and applies currency-specific conventions.
+func (c *Curve) buildOISCoupons(maturity time.Time) []oisCoupon {
+	coupons := []oisCoupon{}
+	start := c.settlement
+	current := start
+
+	// Determine conventions based on calendar
+	payDelay := 0
+	accrualDC := "ACT/365F" // Default
+
+	if c.cal == calendar.JPN {
+		payDelay = 2
+		accrualDC = "ACT/365F"
+	} else if c.cal == calendar.TARGET {
+		payDelay = 1
+		accrualDC = "ACT/360"
+	}
+
+	// Generate annual coupons
+	for {
+		// Move forward 1 year
+		nextUnadj := current.AddDate(1, 0, 0)
+
+		// Check if we reached or passed maturity
+		if !nextUnadj.Before(maturity) {
+			break
+		}
+
+		// Intermediate coupon
+		accrualEnd := calendar.Adjust(c.cal, nextUnadj)
+		payDate := calendar.AddBusinessDays(c.cal, accrualEnd, payDelay)
+		alpha := utils.YearFraction(start, accrualEnd, accrualDC)
+
+		coupons = append(coupons, oisCoupon{PaymentDate: payDate, Accrual: alpha})
+
+		start = accrualEnd
+		current = nextUnadj
+	}
+
+	// Final coupon ending at maturity
+	// Note: 'maturity' passed here is usually an adjusted date from the grid
+	payDate := calendar.AddBusinessDays(c.cal, maturity, payDelay)
+	alpha := utils.YearFraction(start, maturity, accrualDC)
+	coupons = append(coupons, oisCoupon{PaymentDate: payDate, Accrual: alpha})
+
+	return coupons
+}
+
+// solveOISDiscountFactor solves for the discount factor at maturity using Newton-Raphson.
+// It handles cases where intermediate coupons fall between pillars.
+func (c *Curve) solveOISDiscountFactor(quotedDates []time.Time, df map[time.Time]float64, coupons []oisCoupon, parRate float64) float64 {
+	maturity := quotedDates[len(quotedDates)-1]
+	prevPillar := quotedDates[len(quotedDates)-2]
+	dfPrev := df[prevPillar]
+
+	// Initial guess: assume flat forward from previous pillar
+	guess := dfPrev * math.Exp(-0.0 * utils.YearFraction(prevPillar, maturity, c.curveDayCount)) // r=0
+	// Better guess: existing DF? or 1.0? dfPrev is good.
+	guess = dfPrev
+
+	tolerance := 1e-12
+	maxIter := 50
+
+	for iter := 0; iter < maxIter; iter++ {
+		pvFixed := 0.0
+		derivative := 0.0 // d(PV_fixed)/d(DF_maturity)
+
+		for _, cpn := range coupons {
+			var d, dPrime float64
+
+			// If coupon payment is on or before previous pillar, DF is known
+			if !cpn.PaymentDate.After(prevPillar) {
+				d = c.getKnownDF(cpn.PaymentDate, df, quotedDates)
+				dPrime = 0.0
+			} else {
+				// Coupon is in the current unknown interval (prevPillar, maturity]
+				// or (rarely) beyond? (Should not happen for standard OIS)
+				// Interpolate between prevPillar (known) and maturity (unknown x)
+				d, dPrime = c.interpolateUnknownDF(cpn.PaymentDate, prevPillar, dfPrev, maturity, guess)
+			}
+
+			pvFixed += d * cpn.Accrual * parRate
+			derivative += dPrime * cpn.Accrual * parRate
+		}
+
+		// OIS Equation: 1 = PV_fixed + D(maturity)
+		// f(x) = PV_fixed + x - 1
+		// f'(x) = d(PV_fixed)/dx + 1
+
+		fVal := pvFixed + guess - 1.0
+		fPrime := derivative + 1.0
+
+		if math.Abs(fVal) < tolerance {
+			return guess
+		}
+
+		if math.Abs(fPrime) < 1e-15 {
+			break
+		}
+		guess = guess - fVal/fPrime
+	}
+	return guess
+}
+
+// getKnownDF retrieves or interpolates a DF from already solved pillars.
+func (c *Curve) getKnownDF(t time.Time, df map[time.Time]float64, quotedDates []time.Time) float64 {
+	if val, ok := df[t]; ok {
+		return val
+	}
+	// Find bracketing pillars
+	// quotedDates is sorted.
+	// We only look up to len(quotedDates)-2 (excluding the one currently being solved if passed?
+	// The caller passes quotedDates[:i+1] which INCLUDES current.
+	// But this function is called for t <= prevPillar.
+	// So we search in quotedDates.
+	var d1, d2 time.Time
+	for i := 0; i < len(quotedDates)-1; i++ {
+		if (quotedDates[i].Before(t) || quotedDates[i].Equal(t)) &&
+			(t.Before(quotedDates[i+1]) || t.Equal(quotedDates[i+1])) {
+			d1 = quotedDates[i]
+			d2 = quotedDates[i+1]
+			break
+		}
+	}
+
+	if d1.IsZero() {
+		return df[quotedDates[0]] // Fallback
+	}
+
+	// Interpolate
+	df1 := df[d1]
+	df2 := df[d2]
+	t1 := utils.YearFraction(c.settlement, d1, c.curveDayCount)
+	t2 := utils.YearFraction(c.settlement, d2, c.curveDayCount)
+	tTarget := utils.YearFraction(c.settlement, t, c.curveDayCount)
+
+	forwardRate := math.Log(df1/df2) / (t2 - t1)
+	return df1 * math.Exp(-forwardRate*(tTarget-t1))
+}
+
+// interpolateUnknownDF interpolates DF at t where endpoint DF(maturity) = x is unknown.
+// Returns DF(t) and d(DF(t))/dx.
+func (c *Curve) interpolateUnknownDF(t, start time.Time, dfStart float64, end time.Time, x float64) (float64, float64) {
+	// Log-linear interpolation:
+	// D(t) = D(start) * (D(end)/D(start)) ^ ratio
+	// ratio = (t - start) / (end - start)
+	// Let r = ratio.
+	// D(t) = dfStart * (x / dfStart) ^ r
+	//      = dfStart * x^r * dfStart^(-r)
+	//      = dfStart^(1-r) * x^r
+
+	// Derivative dD(t)/dx:
+	// = dfStart^(1-r) * r * x^(r-1)
+	// = r * (dfStart^(1-r) * x^r) / x
+	// = r * D(t) / x
+
+	tStart := utils.YearFraction(c.settlement, start, c.curveDayCount)
+	tEnd := utils.YearFraction(c.settlement, end, c.curveDayCount)
+	tTarget := utils.YearFraction(c.settlement, t, c.curveDayCount)
+
+	if tEnd == tStart {
+		return dfStart, 0
+	}
+
+	ratio := (tTarget - tStart) / (tEnd - tStart)
+	
+	// Safety for x <= 0
+	if x <= 1e-9 {
+		x = 1e-9
+	}
+
+	dfT := math.Pow(dfStart, 1.0-ratio) * math.Pow(x, ratio)
+	dDfdx := ratio * dfT / x
+
+	return dfT, dDfdx
 }
 
 // BuildDualCurve creates an IBOR projection curve using dual-curve bootstrap.
@@ -153,10 +423,12 @@ func BuildDualCurve(settlement time.Time, iborQuotes map[string]float64, oisCurv
 		parsed[tenorToYears(k)] = v
 	}
 	c := &Curve{
-		settlement: settlement,
-		parQuotes:  parsed,
-		cal:        cal,
-		freqMonths: freqMonths,
+		settlement:    settlement,
+		parQuotes:     parsed,
+		cal:           cal,
+		freqMonths:    freqMonths,
+		// Use the same time basis as the OIS curve for consistency.
+		curveDayCount: oisCurve.curveDayCount,
 	}
 	c.paymentDates = c.generatePaymentDates()
 	c.parRates = c.buildParCurve()
@@ -223,9 +495,9 @@ func (c *Curve) bootstrapDualCurveDiscountFactors(oisCurve *Curve) map[time.Time
 			if !d1.IsZero() && !d2.IsZero() {
 				df1 := pseudoDF[d1]
 				df2 := pseudoDF[d2]
-				t1 := utils.Days(c.settlement, d1) / 365.0
-				t2 := utils.Days(c.settlement, d2) / 365.0
-				tTarget := utils.Days(c.settlement, d) / 365.0
+				t1 := utils.YearFraction(c.settlement, d1, c.curveDayCount)
+				t2 := utils.YearFraction(c.settlement, d2, c.curveDayCount)
+				tTarget := utils.YearFraction(c.settlement, d, c.curveDayCount)
 				forwardRate := math.Log(df1/df2) / (t2 - t1)
 				pseudoDF[d] = utils.RoundTo(df1*math.Exp(-forwardRate*(tTarget-t1)), 12)
 			}
@@ -238,9 +510,13 @@ func (c *Curve) bootstrapDualCurveDiscountFactors(oisCurve *Curve) map[time.Time
 // solvePseudoDiscountFactor solves for the IBOR pseudo-DF at a maturity that makes swap NPV = 0.
 func (c *Curve) solvePseudoDiscountFactor(quotedDates []time.Time, pseudoDF map[time.Time]float64, oisCurve *Curve, parRate float64) float64 {
 	maturity := quotedDates[len(quotedDates)-1]
+	prevPillar := quotedDates[len(quotedDates)-2]
 
-	// Initial guess: use OIS DF as starting point
-	guess := oisCurve.DF(maturity)
+	// Initial guess: use previous pseudo DF (better continuity)
+	guess := pseudoDF[prevPillar]
+	if guess == 0 {
+		guess = oisCurve.DF(maturity)
+	}
 
 	// Newton-Raphson solver
 	tolerance := 1e-12
@@ -250,6 +526,14 @@ func (c *Curve) solvePseudoDiscountFactor(quotedDates []time.Time, pseudoDF map[
 		// Calculate NPV and derivative
 		npv, derivative := c.evalIBORSwapNPV(quotedDates, pseudoDF, oisCurve, parRate, guess)
 
+		// Robust checks for NaN/Inf
+		if math.IsNaN(npv) || math.IsInf(npv, 0) || math.IsNaN(derivative) || math.IsInf(derivative, 0) {
+			// Backtrack or reset if numeric instability
+			guess = 0.9 * guess // decay
+			if guess < 1e-9 { guess = 1e-9 }
+			continue
+		}
+
 		if math.Abs(npv) < tolerance {
 			return guess
 		}
@@ -258,7 +542,20 @@ func (c *Curve) solvePseudoDiscountFactor(quotedDates []time.Time, pseudoDF map[
 		if math.Abs(derivative) < 1e-15 {
 			break
 		}
-		guess = guess - npv/derivative
+		
+		delta := npv / derivative
+		
+		// Damping: prevent large steps that might cross zero
+		if math.Abs(delta) > 0.5*guess {
+			delta = 0.5 * guess * (delta / math.Abs(delta))
+		}
+
+		guess = guess - delta
+		
+		// Safety clamp
+		if math.IsNaN(guess) || guess <= 1e-9 {
+			guess = 1e-9
+		}
 	}
 
 	return guess
@@ -284,19 +581,35 @@ func (c *Curve) evalIBORSwapNPV(quotedDates []time.Time, pseudoDF map[time.Time]
 	tempPseudoDF[maturity] = unknownPseudoDF
 
 	// Calculate floating leg PV: sum of IBOR forward payments discounted at OIS
-	// For each floating period (at the IBOR tenor frequency):
-	// forward = (pseudoDF_start / pseudoDF_end - 1) / accrual
-	// pv = forward * accrual * oisDF
 	floatPV := 0.0
 	floatDerivative := 0.0
 
-	// Generate floating periods (use freqMonths from curve)
+	// Generate floating periods using explicit calendar adjustment.
+	// This ensures proper matching with maturity date for derivative calculation.
 	floatingDates := []time.Time{start}
-	for d := start.AddDate(0, c.freqMonths, 0); !d.After(maturity); d = d.AddDate(0, c.freqMonths, 0) {
-		floatingDates = append(floatingDates, d)
+	curr := start
+	for {
+		nextUnadj := curr.AddDate(0, c.freqMonths, 0)
+		nextAdj := calendar.Adjust(c.cal, nextUnadj)
+		
+		if nextAdj.After(maturity) && !nextAdj.Equal(maturity) {
+			// Stop if we overshoot maturity
+			break
+		}
+		
+		floatingDates = append(floatingDates, nextAdj)
+		
+		if nextAdj.Equal(maturity) {
+			break
+		}
+		curr = nextUnadj // Advance using unadjusted
 	}
-	// Ensure maturity is included
-	if floatingDates[len(floatingDates)-1].Before(maturity) {
+	
+	// Force the last date to be maturity if it wasn't added and we are close?
+	// Standard bootstrap pillars should align. If they don't, we might have issues.
+	// But let's trust the loop found maturity if it exists.
+	// If the loop didn't hit maturity, we need to add it?
+	if !floatingDates[len(floatingDates)-1].Equal(maturity) {
 		floatingDates = append(floatingDates, maturity)
 	}
 
@@ -328,32 +641,48 @@ func (c *Curve) evalIBORSwapNPV(quotedDates []time.Time, pseudoDF map[time.Time]
 	}
 
 	// Calculate fixed leg PV (pay fixed at parRate, discounted at OIS)
-	// Fixed leg has ANNUAL payments. Use currency-specific daycount:
-	// - TARGET (EUR): ACT/360
-	// - JPN (JPY): ACT/365F
+	// Fixed leg frequency depends on currency:
+	// - TARGET (EUR): Annual (12M), ACT/360
+	// - JPN (JPY): Semi-Annual (6M), ACT/365F
 	fixedDayCount := "ACT/365F"
+	fixedFreqMonths := 12
 	if c.cal == calendar.TARGET {
 		fixedDayCount = "ACT/360"
+		fixedFreqMonths = 12
+	} else if c.cal == calendar.JPN {
+		fixedDayCount = "ACT/365F"
+		fixedFreqMonths = 6
 	}
 
-	years := utils.Days(start, maturity) / 365.0
-	numFixedPeriods := int(math.Ceil(years))
-
 	fixedPV := 0.0
-	prevDate := start
-	for i := 1; i <= numFixedPeriods; i++ {
-		// Payment date is i years from start
-		paymentDate := start.AddDate(i, 0, 0)
-		// Adjust if beyond maturity
-		if paymentDate.After(maturity) {
-			paymentDate = maturity
+	currUnadj := start
+	prevAdj := start
+	
+	for {
+		currUnadj = currUnadj.AddDate(0, fixedFreqMonths, 0)
+		paymentDate := calendar.Adjust(c.cal, currUnadj)
+		
+		if paymentDate.After(maturity) && !paymentDate.Equal(maturity) {
+			break
 		}
-
-		// Daycount-consistent accrual for fixed leg
-		accrual := utils.YearFraction(prevDate, paymentDate, fixedDayCount)
-		prevDate = paymentDate
-
+		
+		accrual := utils.YearFraction(prevAdj, paymentDate, fixedDayCount)
 		oisDF := oisCurve.DF(paymentDate)
+		fixedPV += oisDF * accrual * parRate
+		
+		prevAdj = paymentDate
+		
+		if paymentDate.Equal(maturity) {
+			break
+		}
+	}
+	
+	// Handle case where we didn't hit maturity?
+	// If standard grid, we should hit it.
+	// If not, force append?
+	if !prevAdj.Equal(maturity) {
+		accrual := utils.YearFraction(prevAdj, maturity, fixedDayCount)
+		oisDF := oisCurve.DF(maturity)
 		fixedPV += oisDF * accrual * parRate
 	}
 
@@ -396,9 +725,9 @@ func (c *Curve) interpolatePseudoDiscountFactor(target time.Time, pseudoDF map[t
 	// Log-linear interpolation
 	px1 := pseudoDF[d1]
 	px2 := pseudoDF[d2]
-	t1 := utils.Days(c.settlement, d1) / 365.0
-	t2 := utils.Days(c.settlement, d2) / 365.0
-	tTarget := utils.Days(c.settlement, target) / 365.0
+	t1 := utils.YearFraction(c.settlement, d1, c.curveDayCount)
+	t2 := utils.YearFraction(c.settlement, d2, c.curveDayCount)
+	tTarget := utils.YearFraction(c.settlement, target, c.curveDayCount)
 
 	forwardRate := math.Log(px1/px2) / (t2 - t1)
 	return px1 * math.Exp(-forwardRate*(tTarget-t1))
@@ -412,7 +741,7 @@ func (c *Curve) buildZero() map[time.Time]float64 {
 			zc[d] = utils.RoundTo(c.parRates[d]*100, 12)
 		} else {
 			df := c.discountFactors[d]
-			yearFrac := utils.Days(c.settlement, d) / 365.0
+			yearFrac := utils.YearFraction(c.settlement, d, c.curveDayCount)
 			zc[d] = utils.RoundTo(-math.Log(df)/yearFrac*100, 12)
 
 		}
@@ -459,5 +788,6 @@ func (c *Curve) ZeroRateAt(t time.Time) float64 {
 
 func (c *Curve) DF(t time.Time) float64 {
 	z := c.ZeroRateAt(t)
-	return math.Exp(-(utils.Days(c.settlement, t) / 365.0) * (z / 100.0))
+	yearFrac := utils.YearFraction(c.settlement, t, c.curveDayCount)
+	return math.Exp(-yearFrac * (z / 100.0))
 }
