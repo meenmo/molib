@@ -71,7 +71,7 @@ Each example demonstrates:
 
 ## Implementation Status
 
-This program currently demonstrates swap **structure specification** using the `swap/benchmark` package conventions.
+This program currently demonstrates swap **structure specification** using the `swap/market` package conventions.
 
 To calculate actual NPV values, you would need to:
 1. Build OIS discount curves from market data
@@ -84,13 +84,14 @@ See `cmd/basiscalc` for a working example of dual-curve pricing for basis swaps.
 ## Architecture
 
 The program uses:
-- `swap/benchmark/LegConvention`: Convention-based leg specifications
-- `swap/benchmark/SwapSpec`: Complete swap specification
+- `swap/market/LegConvention`: Convention-based leg specifications
+- `swap/market/SwapSpec`: Complete swap specification
 - `calendar` package: Business day calendars (TARGET, JPN, USD, KRW)
-- Market-standard conventions from `swap/benchmark/presets.go`
+- Market-standard leg conventions and product presets from `instruments/swaps/conventions.go`
 
 ## Related Tools
 
 - `cmd/basiscalc`: Basis swap pricing with actual market data
 - `scripts/basis_swap.sh`: Generate curve fixtures from database
-- `swap/basis`: Dual-curve pricing engine
+- `swap/api.go`, `swap/common.go`: Pricing entrypoints (NPV, spread solver, schedule)
+- `swap/curve/`: Curve bootstrapping (OIS + dual-curve IBOR)

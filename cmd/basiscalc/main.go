@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/meenmo/molib/db"
-	"github.com/meenmo/molib/swap/basis"
-	"github.com/meenmo/molib/swap/basis/data"
-	"github.com/meenmo/molib/swap/benchmark"
+	swaps "github.com/meenmo/molib/instruments/swaps"
+	"github.com/meenmo/molib/marketdata"
+	"github.com/meenmo/molib/swap"
 )
 
 func main() {
@@ -50,18 +50,31 @@ func main() {
 func runBGNEUR(curveDate time.Time, dbConn *sql.DB) {
 	tenorPairs := [][2]int{{10, 10}, {10, 20}}
 	for _, tp := range tenorPairs {
-		spread, _ := basis.CalculateSpread(
-			curveDate,
-			tp[0],
-			tp[1],
-			benchmark.EURIBOR6MFloat,
-			benchmark.EURIBOR3MFloat,
-			benchmark.ESTRFloat,
-			data.BGNEstr,
-			data.BGNEuribor6M,
-			data.BGNEuribor3M,
-			10_000_000.0,
-		)
+		trade, err := swap.InterestRateSwap(swap.InterestRateSwapParams{
+			DataSource:        swap.DataSourceBGN,
+			ClearingHouse:     swap.ClearingHouseOTC,
+			CurveDate:         curveDate,
+			TradeDate:         curveDate,
+			ValuationDate:     curveDate,
+			ForwardTenorYears: tp[0],
+			SwapTenorYears:    tp[1],
+			Notional:          10_000_000.0,
+			PayLeg:            swaps.EURIBOR6MFloat,
+			RecLeg:            swaps.EURIBOR3MFloat,
+			DiscountingOIS:    swaps.ESTRFloat,
+			OISQuotes:         marketdata.BGNEstr,
+			PayLegQuotes:      marketdata.BGNEuribor6M,
+			RecLegQuotes:      marketdata.BGNEuribor3M,
+		})
+		if err != nil {
+			fmt.Printf("BGN EURIBOR3M/EURIBOR6M %dx%d error=%v\n", tp[0], tp[1], err)
+			continue
+		}
+		spread, _, err := trade.SolveParSpread(swap.SpreadTargetRecLeg)
+		if err != nil {
+			fmt.Printf("BGN EURIBOR3M/EURIBOR6M %dx%d error=%v\n", tp[0], tp[1], err)
+			continue
+		}
 
 		// Query database for expected spread
 		output := fmt.Sprintf("BGN EURIBOR3M/EURIBOR6M %dx%d computed=%.6f bp", tp[0], tp[1], spread)
@@ -88,18 +101,31 @@ func runBGNEUR(curveDate time.Time, dbConn *sql.DB) {
 func runBGNTibor(curveDate time.Time, dbConn *sql.DB) {
 	tenorPairs := [][2]int{{1, 4}, {2, 3}}
 	for _, tp := range tenorPairs {
-		spread, _ := basis.CalculateSpread(
-			curveDate,
-			tp[0],
-			tp[1],
-			benchmark.TIBOR6MFloat,
-			benchmark.TIBOR3MFloat,
-			benchmark.TONARFloat,
-			data.BGNTonar,
-			data.BGNTibor6M,
-			data.BGNTibor3M,
-			10_000_000.0,
-		)
+		trade, err := swap.InterestRateSwap(swap.InterestRateSwapParams{
+			DataSource:        swap.DataSourceBGN,
+			ClearingHouse:     swap.ClearingHouseOTC,
+			CurveDate:         curveDate,
+			TradeDate:         curveDate,
+			ValuationDate:     curveDate,
+			ForwardTenorYears: tp[0],
+			SwapTenorYears:    tp[1],
+			Notional:          10_000_000.0,
+			PayLeg:            swaps.TIBOR6MFloat,
+			RecLeg:            swaps.TIBOR3MFloat,
+			DiscountingOIS:    swaps.TONARFloat,
+			OISQuotes:         marketdata.BGNTonar,
+			PayLegQuotes:      marketdata.BGNTibor6M,
+			RecLegQuotes:      marketdata.BGNTibor3M,
+		})
+		if err != nil {
+			fmt.Printf("BGNS TIBOR3M/TIBOR6M %dx%d error=%v\n", tp[0], tp[1], err)
+			continue
+		}
+		spread, _, err := trade.SolveParSpread(swap.SpreadTargetRecLeg)
+		if err != nil {
+			fmt.Printf("BGNS TIBOR3M/TIBOR6M %dx%d error=%v\n", tp[0], tp[1], err)
+			continue
+		}
 
 		// Query database for expected spread
 		output := fmt.Sprintf("BGNS TIBOR3M/TIBOR6M %dx%d computed=%.6f bp", tp[0], tp[1], spread)
@@ -126,18 +152,31 @@ func runBGNTibor(curveDate time.Time, dbConn *sql.DB) {
 func runLCHEUR(curveDate time.Time, dbConn *sql.DB) {
 	tenorPairs := [][2]int{{10, 10}, {10, 20}}
 	for _, tp := range tenorPairs {
-		spread, _ := basis.CalculateSpread(
-			curveDate,
-			tp[0],
-			tp[1],
-			benchmark.EURIBOR6MFloat,
-			benchmark.EURIBOR3MFloat,
-			benchmark.ESTRFloat,
-			data.LCHEstr,
-			data.LCHEuribor6M,
-			data.LCHEuribor3M,
-			10_000_000.0,
-		)
+		trade, err := swap.InterestRateSwap(swap.InterestRateSwapParams{
+			DataSource:        swap.DataSourceLCH,
+			ClearingHouse:     swap.ClearingHouseOTC,
+			CurveDate:         curveDate,
+			TradeDate:         curveDate,
+			ValuationDate:     curveDate,
+			ForwardTenorYears: tp[0],
+			SwapTenorYears:    tp[1],
+			Notional:          10_000_000.0,
+			PayLeg:            swaps.EURIBOR6MFloat,
+			RecLeg:            swaps.EURIBOR3MFloat,
+			DiscountingOIS:    swaps.ESTRFloat,
+			OISQuotes:         marketdata.LCHEstr,
+			PayLegQuotes:      marketdata.LCHEuribor6M,
+			RecLegQuotes:      marketdata.LCHEuribor3M,
+		})
+		if err != nil {
+			fmt.Printf("LCH EURIBOR3M/EURIBOR6M %dx%d error=%v\n", tp[0], tp[1], err)
+			continue
+		}
+		spread, _, err := trade.SolveParSpread(swap.SpreadTargetRecLeg)
+		if err != nil {
+			fmt.Printf("LCH EURIBOR3M/EURIBOR6M %dx%d error=%v\n", tp[0], tp[1], err)
+			continue
+		}
 
 		// Query database for expected spread
 		output := fmt.Sprintf("LCH EURIBOR3M/EURIBOR6M %dx%d computed=%.6f bp", tp[0], tp[1], spread)

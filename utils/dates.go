@@ -14,6 +14,29 @@ func SortDates(dates []time.Time) {
 	})
 }
 
+// AdjacentDates returns the two dates from a sorted date slice that bracket target.
+//
+// It assumes dates is sorted in ascending order and has at least two elements.
+// If target is outside the provided range, it returns the nearest boundary pair.
+func AdjacentDates(target time.Time, dates []time.Time) (time.Time, time.Time) {
+	if len(dates) < 2 {
+		panic("AdjacentDates: need at least 2 dates")
+	}
+
+	// First index with dates[i] >= target.
+	i := sort.Search(len(dates), func(i int) bool {
+		return !dates[i].Before(target)
+	})
+
+	if i <= 0 {
+		return dates[0], dates[1]
+	}
+	if i >= len(dates) {
+		return dates[len(dates)-2], dates[len(dates)-1]
+	}
+	return dates[i-1], dates[i]
+}
+
 // DateParser converts YYYY-MM-DD to time.Time or exits on error.
 func DateParser(strDate string) time.Time {
 	const layout = "2006-01-02"

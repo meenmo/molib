@@ -5,7 +5,8 @@ import (
 	"time"
 
 	"github.com/meenmo/molib/calendar"
-	"github.com/meenmo/molib/swap/benchmark"
+	swaps "github.com/meenmo/molib/instruments/swaps"
+	benchmark "github.com/meenmo/molib/swap/market"
 )
 
 func main() {
@@ -80,7 +81,7 @@ func priceEURSwap_EURIBOR3M(tradeDate time.Time) {
 	}
 
 	// Create floating leg convention (EURIBOR 3M)
-	floatingLeg := benchmark.EURIBOR3MFloat // Using preset from swap/benchmark/presets.go
+	floatingLeg := swaps.EURIBOR3MFloat // Preset conventions from instruments/swaps
 
 	// Create swap specification
 	swap := benchmark.SwapSpec{
@@ -89,7 +90,7 @@ func priceEURSwap_EURIBOR3M(tradeDate time.Time) {
 		MaturityDate:   maturity,
 		PayLeg:         fixedLeg,
 		RecLeg:         floatingLeg,
-		DiscountingOIS: benchmark.ESTRFloat, // Discount with ESTR OIS curve
+		DiscountingOIS: swaps.ESTRFloat, // Discount with ESTR OIS curve
 	}
 
 	fmt.Printf("   Effective: %s | Maturity: %s\n",
@@ -122,7 +123,7 @@ func priceEURSwap_EURIBOR6M(tradeDate time.Time) {
 		Calendar:              calendar.TARGET,
 	}
 
-	floatingLeg := benchmark.EURIBOR6MFloat
+	floatingLeg := swaps.EURIBOR6MFloat
 
 	swap := benchmark.SwapSpec{
 		Notional:       notional,
@@ -130,7 +131,7 @@ func priceEURSwap_EURIBOR6M(tradeDate time.Time) {
 		MaturityDate:   maturity,
 		PayLeg:         fixedLeg,
 		RecLeg:         floatingLeg,
-		DiscountingOIS: benchmark.ESTRFloat,
+		DiscountingOIS: swaps.ESTRFloat,
 	}
 
 	fmt.Printf("   Effective: %s | Maturity: %s\n",
@@ -157,7 +158,7 @@ func priceJPYSwap_TIBOR3M(tradeDate time.Time) {
 		Calendar:              calendar.JPN,
 	}
 
-	floatingLeg := benchmark.TIBOR3MFloat
+	floatingLeg := swaps.TIBOR3MFloat
 
 	swap := benchmark.SwapSpec{
 		Notional:       notional,
@@ -165,7 +166,7 @@ func priceJPYSwap_TIBOR3M(tradeDate time.Time) {
 		MaturityDate:   maturity,
 		PayLeg:         fixedLeg,
 		RecLeg:         floatingLeg,
-		DiscountingOIS: benchmark.TONARFloat,
+		DiscountingOIS: swaps.TONARFloat,
 	}
 
 	fmt.Printf("   Effective: %s | Maturity: %s\n",
@@ -192,7 +193,7 @@ func priceJPYSwap_TIBOR6M(tradeDate time.Time) {
 		Calendar:              calendar.JPN,
 	}
 
-	floatingLeg := benchmark.TIBOR6MFloat
+	floatingLeg := swaps.TIBOR6MFloat
 
 	swap := benchmark.SwapSpec{
 		Notional:       notional,
@@ -200,7 +201,7 @@ func priceJPYSwap_TIBOR6M(tradeDate time.Time) {
 		MaturityDate:   maturity,
 		PayLeg:         fixedLeg,
 		RecLeg:         floatingLeg,
-		DiscountingOIS: benchmark.TONARFloat,
+		DiscountingOIS: swaps.TONARFloat,
 	}
 
 	fmt.Printf("   Effective: %s | Maturity: %s\n",
@@ -227,7 +228,7 @@ func priceEURSwap_ESTR(tradeDate time.Time) {
 		Calendar:              calendar.TARGET,
 	}
 
-	floatingLeg := benchmark.ESTRFloat
+	floatingLeg := swaps.ESTRFloat
 
 	swap := benchmark.SwapSpec{
 		Notional:       notional,
@@ -235,7 +236,7 @@ func priceEURSwap_ESTR(tradeDate time.Time) {
 		MaturityDate:   maturity,
 		PayLeg:         fixedLeg,
 		RecLeg:         floatingLeg,
-		DiscountingOIS: benchmark.ESTRFloat, // Single curve for OIS
+		DiscountingOIS: swaps.ESTRFloat, // Single curve for OIS
 	}
 
 	fmt.Printf("   Effective: %s | Maturity: %s\n",
@@ -262,7 +263,7 @@ func priceJPYSwap_TONAR(tradeDate time.Time) {
 		Calendar:              calendar.JPN,
 	}
 
-	floatingLeg := benchmark.TONARFloat
+	floatingLeg := swaps.TONARFloat
 
 	swap := benchmark.SwapSpec{
 		Notional:       notional,
@@ -270,7 +271,7 @@ func priceJPYSwap_TONAR(tradeDate time.Time) {
 		MaturityDate:   maturity,
 		PayLeg:         fixedLeg,
 		RecLeg:         floatingLeg,
-		DiscountingOIS: benchmark.TONARFloat,
+		DiscountingOIS: swaps.TONARFloat,
 	}
 
 	fmt.Printf("   Effective: %s | Maturity: %s\n",

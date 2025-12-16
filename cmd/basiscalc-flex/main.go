@@ -6,9 +6,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/meenmo/molib/swap/basis"
-	"github.com/meenmo/molib/swap/basis/data"
-	"github.com/meenmo/molib/swap/benchmark"
+	swaps "github.com/meenmo/molib/instruments/swaps"
+	"github.com/meenmo/molib/marketdata"
+	"github.com/meenmo/molib/swap"
+	"github.com/meenmo/molib/swap/market"
 )
 
 func main() {
@@ -30,32 +31,35 @@ func main() {
 
 	// Select data based on provider and currency
 	var oisQuotes, ibor3mQuotes, ibor6mQuotes map[string]float64
-	var payLeg, recLeg, oisLeg benchmark.LegConvention
+	var payLeg, recLeg, oisLeg market.LegConvention
+	dataSource := swap.DataSourceBGN
+	clearingHouse := swap.ClearingHouseOTC
 
 	switch {
 	case *provider == "BGN" && *currency == "EUR":
-		oisQuotes = data.BGNEstr
-		ibor3mQuotes = data.BGNEuribor3M
-		ibor6mQuotes = data.BGNEuribor6M
-		payLeg = benchmark.EURIBOR6MFloat
-		recLeg = benchmark.EURIBOR3MFloat
-		oisLeg = benchmark.ESTRFloat
+		oisQuotes = marketdata.BGNEstr
+		ibor3mQuotes = marketdata.BGNEuribor3M
+		ibor6mQuotes = marketdata.BGNEuribor6M
+		payLeg = swaps.EURIBOR6MFloat
+		recLeg = swaps.EURIBOR3MFloat
+		oisLeg = swaps.ESTRFloat
 
 	case *provider == "LCH" && *currency == "EUR":
-		oisQuotes = data.LCHEstr
-		ibor3mQuotes = data.LCHEuribor3M
-		ibor6mQuotes = data.LCHEuribor6M
-		payLeg = benchmark.EURIBOR6MFloat
-		recLeg = benchmark.EURIBOR3MFloat
-		oisLeg = benchmark.ESTRFloat
+		dataSource = swap.DataSourceLCH
+		oisQuotes = marketdata.LCHEstr
+		ibor3mQuotes = marketdata.LCHEuribor3M
+		ibor6mQuotes = marketdata.LCHEuribor6M
+		payLeg = swaps.EURIBOR6MFloat
+		recLeg = swaps.EURIBOR3MFloat
+		oisLeg = swaps.ESTRFloat
 
 	case *provider == "BGN" && *currency == "JPY":
-		oisQuotes = data.BGNTonar
-		ibor3mQuotes = data.BGNTibor3M
-		ibor6mQuotes = data.BGNTibor6M
-		payLeg = benchmark.TIBOR6MFloat
-		recLeg = benchmark.TIBOR3MFloat
-		oisLeg = benchmark.TONARFloat
+		oisQuotes = marketdata.BGNTonar
+		ibor3mQuotes = marketdata.BGNTibor3M
+		ibor6mQuotes = marketdata.BGNTibor6M
+		payLeg = swaps.TIBOR6MFloat
+		recLeg = swaps.TIBOR3MFloat
+		oisLeg = swaps.TONARFloat
 
 	default:
 		fmt.Fprintf(os.Stderr, "Unsupported combination: provider=%s, currency=%s\n", *provider, *currency)
@@ -63,19 +67,32 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Calculate spread
-	spread, pv := basis.CalculateSpread(
-		curveDate,
-		*fwdStart,
-		*swapTenor,
-		payLeg,
-		recLeg,
-		oisLeg,
-		oisQuotes,
-		ibor6mQuotes,
-		ibor3mQuotes,
-		10_000_000.0,
-	)
+	trade, err := swap.InterestRateSwap(swap.InterestRateSwapParams{
+		DataSource:        dataSource,
+		ClearingHouse:     clearingHouse,
+		CurveDate:         curveDate,
+		TradeDate:         curveDate,
+		ValuationDate:     curveDate,
+		ForwardTenorYears: *fwdStart,
+		SwapTenorYears:    *swapTenor,
+		Notional:          10_000_000.0,
+		PayLeg:            payLeg,
+		RecLeg:            recLeg,
+		DiscountingOIS:    oisLeg,
+		OISQuotes:         oisQuotes,
+		PayLegQuotes:      ibor6mQuotes,
+		RecLegQuotes:      ibor3mQuotes,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building trade: %v\n", err)
+		os.Exit(1)
+	}
+
+	spread, pv, err := trade.SolveParSpread(swap.SpreadTargetRecLeg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error solving spread: %v\n", err)
+		os.Exit(1)
+	}
 
 	fmt.Printf("Curve Date:  %s\n", curveDate.Format("2006-01-02"))
 	fmt.Printf("Provider:    %s\n", *provider)

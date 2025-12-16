@@ -31,11 +31,11 @@ Added new calendar IDs:
 - `USD`: US dollar calendar
 - `KRW`: Korean won calendar
 
-### 2. `swap/benchmark/benchmark.go`
+### 2. `swap/market/index.go`
 Added new reference rate:
 - `SOFR`: Secured Overnight Financing Rate
 
-### 3. `swap/benchmark/leg.go`
+### 3. `swap/market/leg.go`
 Added new day count conventions:
 - `Act365`: ACT/365 (for Korean market)
 - `Dc30360`: 30/360 (for EUR fixed legs)
@@ -70,7 +70,7 @@ Trade Date: 2024-11-25
 1. **Market-Standard Conventions**: Uses real-world market conventions for each reference rate
 2. **Dual-Curve Framework**: Demonstrates proper OIS discounting with IBOR projection
 3. **Multiple Markets**: Covers EUR, JPY, USD, and KRW markets
-4. **Extensible Architecture**: Built on the `swap/benchmark` convention-based system
+4. **Extensible Architecture**: Built on the `swap/market` convention-based system
 
 ## Implementation Notes
 
@@ -102,7 +102,8 @@ To extend this to calculate actual NPV values, you would need to:
    - Calculate NPV as receiver or payer
 
 4. **Example Reference**:
-   - See `swap/basis/pricing.go` for dual-curve implementation
+   - See `swap/api.go` and `swap/common.go` for trade construction and PV/spread solving
+   - See `swap/curve/` for curve bootstrapping (OIS + dual-curve IBOR)
    - See `cmd/basiscalc` for working pricing example
 
 ## Relationship to Basis Swap Pricing
@@ -121,7 +122,7 @@ This plain vanilla swap demonstration complements the existing basis swap pricin
 
 To implement full NPV calculation for plain vanilla swaps:
 
-1. Adapt the curve building from `swap/basis/curve.go`
+1. Adapt the curve building from `swap/curve/curve.go`
 2. Implement fixed leg cash flow generation
 3. Implement floating leg cash flow generation (similar to basis swap)
 4. Apply dual-curve discounting

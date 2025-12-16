@@ -52,18 +52,25 @@ go run ./cmd/basiscalc-flex -forward 20 -tenor 10
 │   │   └── main.go
 │   └── basiscalc-flex/     # NEW: Flexible calculator
 │       └── main.go
+├── instruments/
+│   └── swaps/              # Leg conventions + presets
+│       └── conventions.go
 ├── docs/
 │   ├── QUICK_START.md      # This file
 │   └── TESTING_GUIDE.md    # Complete testing guide
+├── marketdata/             # Embedded curve fixtures
+│   ├── fixtures_bgn_euribor.go
+│   ├── fixtures_lch_euribor.go
+│   └── fixtures_bgn_tibor.go
 ├── scripts/
 │   └── extract_curves_new_date.py  # Extract DB data for new dates
-└── swap/basis/
-    ├── curve.go            # ✅ Fixed OIS bootstrap
-    ├── pricing.go
-    └── data/
-        ├── fixtures_bgn_eur.go  # ✅ Fixed EURIBOR6M quotes
-        ├── fixtures_lch_eur.go
-        └── fixtures_bgn_tibor.go
+└── swap/
+    ├── api.go              # Unified trade builder API
+    ├── common.go           # NPV, schedules, spread solver
+    ├── curve/              # Curve construction (OIS + dual-curve)
+    ├── market/             # Primitive types (legs/spec)
+    └── clearinghouse/
+        └── krx/            # KRX-specific legacy engine
 ```
 
 ## 🔄 Testing with a New Curve Date
@@ -88,8 +95,8 @@ cat /tmp/curves_20251125.txt
 
 ```bash
 # Create a new fixture file
-cat > swap/basis/data/fixtures_bgn_eur_20251125.go << 'EOF'
-package data
+cat > marketdata/fixtures_bgn_eur_20251125.go << 'EOF'
+package marketdata
 
 // BGN EUR quotes for curve date 2025-11-25
 var (
@@ -116,27 +123,41 @@ package main
 import (
     "fmt"
     "time"
-    "github.com/meenmo/molib/swap/basis"
-    "github.com/meenmo/molib/swap/basis/data"
-    "github.com/meenmo/molib/swap/benchmark"
+    swaps "github.com/meenmo/molib/instruments/swaps"
+    "github.com/meenmo/molib/marketdata"
+    "github.com/meenmo/molib/swap"
 )
 
 func main() {
     curveDate := time.Date(2025, 11, 25, 0, 0, 0, 0, time.UTC)
 
-    spread, pv := basis.CalculateSpread(
-        curveDate,
-        10, 10,
-        benchmark.EURIBOR6MFloat,
-        benchmark.EURIBOR3MFloat,
-        benchmark.ESTRFloat,
-        data.BGNEstr_20251125,
-        data.BGNEuribor6M_20251125,
-        data.BGNEuribor3M_20251125,
-        10_000_000.0,
-    )
+    trade, err := swap.InterestRateSwap(swap.InterestRateSwapParams{
+        DataSource:        swap.DataSourceBGN,
+        ClearingHouse:     swap.ClearingHouseOTC,
+        CurveDate:         curveDate,
+        TradeDate:         curveDate,
+        ValuationDate:     curveDate,
+        ForwardTenorYears: 10,
+        SwapTenorYears:    10,
+        Notional:          10_000_000.0,
+        PayLeg:            swaps.EURIBOR6MFloat,
+        RecLeg:            swaps.EURIBOR3MFloat,
+        DiscountingOIS:    swaps.ESTRFloat,
+        OISQuotes:         marketdata.BGNEstr_20251125,
+        PayLegQuotes:      marketdata.BGNEuribor6M_20251125,
+        RecLegQuotes:      marketdata.BGNEuribor3M_20251125,
+    })
+    if err != nil {
+        panic(err)
+    }
+
+    spread, pv, err := trade.SolveParSpread(swap.SpreadTargetRecLeg)
+    if err != nil {
+        panic(err)
+    }
 
     fmt.Printf("Result: %.6f bp\n", spread)
+    fmt.Printf("NPV: %.2f\n", pv.TotalPV)
 }
 ```
 
@@ -166,13 +187,13 @@ import (
     "fmt"
     "time"
     "github.com/meenmo/molib/calendar"
-    "github.com/meenmo/molib/swap/basis"
-    "github.com/meenmo/molib/swap/basis/data"
+    "github.com/meenmo/molib/swap/curve"
+    "github.com/meenmo/molib/marketdata"
 )
 
 func main() {
     settlement, _ := time.Parse("2006-01-02", "2025-11-21")
-    oisCurve := basis.BuildCurve(settlement, data.BGNEstr, calendar.TARGET, 1)
+    oisCurve := curve.BuildCurve(settlement, marketdata.BGNEstr, calendar.TARGET, 1)
 
     for _, years := range []int{1, 5, 10, 15, 20, 30} {
         d := settlement.AddDate(years, 0, 0)

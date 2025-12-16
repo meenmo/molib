@@ -5,9 +5,10 @@ import (
 	"time"
 
 	"github.com/meenmo/molib/calendar"
-	"github.com/meenmo/molib/swap/basis"
-	basisdata "github.com/meenmo/molib/swap/basis/data"
-	"github.com/meenmo/molib/swap/benchmark"
+	swaps "github.com/meenmo/molib/instruments/swaps"
+	basisdata "github.com/meenmo/molib/marketdata"
+	"github.com/meenmo/molib/swap/curve"
+	"github.com/meenmo/molib/swap/market"
 	"github.com/meenmo/molib/utils"
 )
 
@@ -20,13 +21,13 @@ type localPeriod struct {
 }
 
 // buildScheduleLocal copies basis.buildSchedule for local inspection.
-func buildScheduleLocal(effective, maturity time.Time, leg benchmark.LegConvention) []localPeriod {
+func buildScheduleLocal(effective, maturity time.Time, leg market.LegConvention) []localPeriod {
 	periods := []localPeriod{}
 	months := int(leg.PayFrequency)
 	start := effective
 	for {
 		var next time.Time
-		if leg.RollConvention == benchmark.BackwardEOM {
+		if leg.RollConvention == market.BackwardEOM {
 			next = utils.AddMonth(start, months)
 		} else {
 			next = start.AddDate(0, months, 0)
@@ -48,26 +49,10 @@ func buildScheduleLocal(effective, maturity time.Time, leg benchmark.LegConventi
 	return periods
 }
 
-// forwardRateTenorAlignedLocal matches basis.forwardRateTenorAligned.
-func forwardRateTenorAlignedLocal(proj *basis.Curve, start time.Time, leg benchmark.LegConvention, dayCount string) float64 {
-	tenorMonths := int(leg.PayFrequency)
-	tenorEnd := start.AddDate(0, tenorMonths, 0)
-	tenorEnd = calendar.Adjust(leg.Calendar, tenorEnd)
-
-	dfStart := proj.DF(start)
-	dfEnd := proj.DF(tenorEnd)
-
-	alpha := utils.YearFraction(start, tenorEnd, dayCount)
-	if alpha == 0 {
-		return 0
-	}
-	return (dfStart/dfEnd - 1.0) / alpha
-}
-
-// forwardRateLocal is the simple DF-based forward used for OIS legs.
-func forwardRateLocal(curve *basis.Curve, start, end time.Time, dayCount string) float64 {
-	dfStart := curve.DF(start)
-	dfEnd := curve.DF(end)
+// forwardRateLocal matches the forward logic in swap/basis/valuation.go.
+func forwardRateLocal(crv *curve.Curve, start, end time.Time, dayCount string) float64 {
+	dfStart := crv.DF(start)
+	dfEnd := crv.DF(end)
 	alpha := utils.YearFraction(start, end, dayCount)
 	if alpha == 0 {
 		return 0
@@ -97,14 +82,14 @@ func main() {
 
 	// Leg conventions: start from presets, override daycount to ACT/360 on both legs
 	// to match the SWPM cashflows (accrualDays / 360).
-	payLeg := benchmark.TIBOR6MFloat
-	payLeg.DayCount = benchmark.Act360
+	payLeg := swaps.TIBOR6MFloat
+	payLeg.DayCount = market.Act360
 
-	recLeg := benchmark.TONARFloat
-	recLeg.DayCount = benchmark.Act360
+	recLeg := swaps.TONARFloat
+	recLeg.DayCount = market.Act360
 
 	// Discounting on TONAR OIS (BGN)
-	oisLeg := benchmark.TONARFloat
+	oisLeg := swaps.TONARFloat
 	oisQuotes := basisdata.BGNTonar
 
 	// Pay-leg IBOR curve: TIBOR6M from BGNS (via alias)
@@ -126,8 +111,8 @@ func main() {
 	maturity := calendar.AdjustFollowing(oisLeg.Calendar, unadjMat)
 
 	// Build curves at curve date (settlement = curve date).
-	discCurve := basis.BuildCurve(curveDate, oisQuotes, oisLeg.Calendar, 1)
-	projPay := basis.BuildDualCurve(curveDate, payQuotes, discCurve, payLeg.Calendar, int(payLeg.PayFrequency))
+	discCurve := curve.BuildCurve(curveDate, oisQuotes, oisLeg.Calendar, 1)
+	projPay := curve.BuildProjectionCurve(curveDate, payLeg, payQuotes, discCurve)
 	// TONAR projection uses the same OIS curve.
 	projRec := discCurve
 
@@ -173,7 +158,7 @@ func main() {
 		accr := accrDays / 360.0
 
 		// Forward rate from TIBOR6M dual curve.
-		fwd := forwardRateTenorAlignedLocal(projPay, p.AccrualStart, payLeg, string(payLeg.DayCount))
+		fwd := forwardRateLocal(projPay, p.AccrualStart, p.AccrualEnd, string(payLeg.DayCount))
 		df := discCurve.DF(p.PaymentDate)
 		zero := projPay.ZeroRateAt(p.PaymentDate)
 

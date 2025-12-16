@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"github.com/meenmo/molib/calendar"
-	"github.com/meenmo/molib/swap/basis"
-	"github.com/meenmo/molib/swap/basis/data"
-	"github.com/meenmo/molib/swap/benchmark"
+	swaps "github.com/meenmo/molib/instruments/swaps"
+	"github.com/meenmo/molib/marketdata"
+	"github.com/meenmo/molib/swap"
+	"github.com/meenmo/molib/swap/curve"
+	"github.com/meenmo/molib/swap/market"
 	"github.com/meenmo/molib/utils"
 )
 
@@ -20,13 +22,13 @@ type localPeriod struct {
 }
 
 // buildScheduleLocal copies basis.buildSchedule for local inspection.
-func buildScheduleLocal(effective, maturity time.Time, leg benchmark.LegConvention) []localPeriod {
+func buildScheduleLocal(effective, maturity time.Time, leg market.LegConvention) []localPeriod {
 	periods := []localPeriod{}
 	months := int(leg.PayFrequency)
 	start := effective
 	for {
 		var next time.Time
-		if leg.RollConvention == benchmark.BackwardEOM {
+		if leg.RollConvention == market.BackwardEOM {
 			next = utils.AddMonth(start, months)
 		} else {
 			next = start.AddDate(0, months, 0)
@@ -49,7 +51,7 @@ func buildScheduleLocal(effective, maturity time.Time, leg benchmark.LegConventi
 }
 
 // forwardRateTenorAlignedLocal mirrors basis.forwardRateTenorAligned.
-func forwardRateTenorAlignedLocal(proj *basis.Curve, start time.Time, leg benchmark.LegConvention, dayCount string) float64 {
+func forwardRateTenorAlignedLocal(proj *curve.Curve, start time.Time, leg market.LegConvention, dayCount string) float64 {
 	tenorMonths := int(leg.PayFrequency)
 	tenorEnd := start.AddDate(0, tenorMonths, 0)
 	tenorEnd = calendar.Adjust(leg.Calendar, tenorEnd)
@@ -68,9 +70,9 @@ func main() {
 	// Hard-coded scenario: BGN EUR 10x20, curve/valuation date 2025-01-29.
 	curveDate := time.Date(2025, time.January, 29, 0, 0, 0, 0, time.UTC)
 
-	oisLeg := benchmark.ESTRFloat
-	payLeg := benchmark.EURIBOR6MFloat
-	recLeg := benchmark.EURIBOR3MFloat
+	oisLeg := swaps.ESTRFloat
+	payLeg := swaps.EURIBOR6MFloat
+	recLeg := swaps.EURIBOR3MFloat
 
 	tradeDate := curveDate
 	spotDate := calendar.AddBusinessDays(oisLeg.Calendar, tradeDate, 2)
@@ -80,11 +82,11 @@ func main() {
 	unadjMat := effective.AddDate(20, 0, 0)
 	maturity := calendar.AdjustFollowing(oisLeg.Calendar, unadjMat)
 
-	discCurve := basis.BuildCurve(curveDate, data.BGNEstr, oisLeg.Calendar, 1)
-	projPay := basis.BuildDualCurve(curveDate, data.BGNEuribor6M, discCurve, payLeg.Calendar, int(payLeg.PayFrequency))
-	projRec := basis.BuildDualCurve(curveDate, data.BGNEuribor3M, discCurve, recLeg.Calendar, int(recLeg.PayFrequency))
+	discCurve := curve.BuildCurve(curveDate, marketdata.BGNEstr, oisLeg.Calendar, 1)
+	projPay := curve.BuildProjectionCurve(curveDate, payLeg, marketdata.BGNEuribor6M, discCurve)
+	projRec := curve.BuildProjectionCurve(curveDate, recLeg, marketdata.BGNEuribor3M, discCurve)
 
-	spec := benchmark.SwapSpec{
+	spec := market.SwapSpec{
 		Notional:       10_000_000.0,
 		EffectiveDate:  effective,
 		MaturityDate:   maturity,
@@ -93,18 +95,28 @@ func main() {
 		DiscountingOIS: oisLeg,
 	}
 
-	// Sanity check: reproduce molib spread.
-	spreadBP, _ := basis.CalculateSpread(
-		curveDate,
-		10, 20,
-		payLeg,
-		recLeg,
-		oisLeg,
-		data.BGNEstr,
-		data.BGNEuribor6M,
-		data.BGNEuribor3M,
-		spec.Notional,
-	)
+	trade, err := swap.InterestRateSwap(swap.InterestRateSwapParams{
+		Venue:             swap.VenueBGN,
+		CurveDate:         curveDate,
+		TradeDate:         curveDate,
+		ValuationDate:     curveDate,
+		ForwardTenorYears: 10,
+		SwapTenorYears:    20,
+		Notional:          spec.Notional,
+		PayLeg:            payLeg,
+		RecLeg:            recLeg,
+		DiscountingOIS:    oisLeg,
+		OISQuotes:         marketdata.BGNEstr,
+		PayLegQuotes:      marketdata.BGNEuribor6M,
+		RecLegQuotes:      marketdata.BGNEuribor3M,
+	})
+	if err != nil {
+		panic(err)
+	}
+	spreadBP, _, err := trade.SolveParSpread(swap.SpreadTargetRecLeg)
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println("=== BGN EUR 10x20 diagnostics for 2025-01-29 (molib stack) ===")
 	fmt.Printf("Curve/valuation date: %s\n", curveDate.Format("2006-01-02"))

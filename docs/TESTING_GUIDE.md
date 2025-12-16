@@ -63,7 +63,7 @@ docker exec -u airflow airflow-worker python3 /tmp/extract_curves_new_date.py 20
 
 ```bash
 # Copy to data directory
-cp /tmp/curves_2025_11_25.go /Users/meenmo/Documents/workspace/molib/swap/basis/data/fixtures_bgn_eur_20251125.go
+cp /tmp/curves_2025_11_25.go /Users/meenmo/Documents/workspace/molib/marketdata/fixtures_bgn_eur_20251125.go
 ```
 
 #### Step 3: Update the fixture file format
@@ -71,7 +71,7 @@ cp /tmp/curves_2025_11_25.go /Users/meenmo/Documents/workspace/molib/swap/basis/
 Edit the file to match Go package format:
 
 ```go
-package data
+package marketdata
 
 // BGN EUR quotes for curve date 2025-11-25.
 var (
@@ -100,25 +100,38 @@ package main
 import (
     "fmt"
     "time"
-    "github.com/meenmo/molib/swap/basis"
-    "github.com/meenmo/molib/swap/basis/data"
-    "github.com/meenmo/molib/swap/benchmark"
+    swaps "github.com/meenmo/molib/instruments/swaps"
+    "github.com/meenmo/molib/marketdata"
+    "github.com/meenmo/molib/swap"
 )
 
 func main() {
     curveDate := time.Date(2025, 11, 25, 0, 0, 0, 0, time.UTC)
 
-    spread, pv := basis.CalculateSpread(
-        curveDate,
-        10, 10,
-        benchmark.EURIBOR6M_FLOATING,
-        benchmark.EURIBOR3M_FLOATING,
-        benchmark.ESTR_OIS,
-        data.BGNEstr_20251125,
-        data.BGNEuribor6M_20251125,
-        data.BGNEuribor3M_20251125,
-        10_000_000.0,
-    )
+    trade, err := swap.InterestRateSwap(swap.InterestRateSwapParams{
+        DataSource:        swap.DataSourceBGN,
+        ClearingHouse:     swap.ClearingHouseOTC,
+        CurveDate:         curveDate,
+        TradeDate:         curveDate,
+        ValuationDate:     curveDate,
+        ForwardTenorYears: 10,
+        SwapTenorYears:    10,
+        Notional:          10_000_000.0,
+        PayLeg:            swaps.EURIBOR6MFloat,
+        RecLeg:            swaps.EURIBOR3MFloat,
+        DiscountingOIS:    swaps.ESTRFloat,
+        OISQuotes:         marketdata.BGNEstr_20251125,
+        PayLegQuotes:      marketdata.BGNEuribor6M_20251125,
+        RecLegQuotes:      marketdata.BGNEuribor3M_20251125,
+    })
+    if err != nil {
+        panic(err)
+    }
+
+    spread, pv, err := trade.SolveParSpread(swap.SpreadTargetRecLeg)
+    if err != nil {
+        panic(err)
+    }
 
     fmt.Printf("BGN EUR 10x10 (2025-11-25): %.6f bp, NPV=%.2f\n", spread, pv.TotalPV)
 }
@@ -217,13 +230,13 @@ import (
     "fmt"
     "time"
     "github.com/meenmo/molib/calendar"
-    "github.com/meenmo/molib/swap/basis"
-    "github.com/meenmo/molib/swap/basis/data"
+    "github.com/meenmo/molib/swap/curve"
+    "github.com/meenmo/molib/marketdata"
 )
 
 func main() {
     settlement, _ := time.Parse("2006-01-02", "2025-11-21")
-    oisCurve := basis.BuildCurve(settlement, data.BGNEstr, calendar.TARGET, 1)
+    oisCurve := curve.BuildCurve(settlement, marketdata.BGNEstr, calendar.TARGET, 1)
 
     // Check DFs at key tenors
     for _, years := range []int{1, 2, 5, 10, 15, 20, 25, 30} {
@@ -243,11 +256,11 @@ func main() {
 
 ```go
 // Add to test program
-periods := buildSchedule(effectiveDate, maturityDate, legConvention)
+periods, _ := swap.GenerateSchedule(effectiveDate, maturityDate, legConvention)
 fmt.Printf("Number of periods: %d\n", len(periods))
 for i, p := range periods[:5] {  // First 5 periods
     fmt.Printf("Period %d: %v to %v, pay on %v\n",
-        i, p.AccrualStart, p.AccrualEnd, p.PaymentDate)
+        i, p.StartDate, p.EndDate, p.PayDate)
 }
 ```
 
@@ -284,8 +297,8 @@ done
 
 To add USD, GBP, or other currencies:
 
-1. Add new fixture files in `swap/basis/data/`
-2. Add new benchmark leg conventions in `swap/benchmark/`
+1. Add new fixture files in `marketdata/`
+2. Add new market leg conventions in `swap/market/`
 3. Update the flexible calculator to support new currencies
 4. Extract curve data from database for the new currency
 
@@ -295,6 +308,6 @@ Example for USD:
 docker exec -u airflow airflow-worker python3 /tmp/extract_curves_usd.py 2025-11-21
 
 # Add to data/fixtures_bgn_usd.go
-# Add benchmark.SOFR_OIS, benchmark.USD_LIBOR_3M, etc.
+# Add market.SOFR (and any USD IBOR indices, if needed)
 # Update test program
 ```

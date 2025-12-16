@@ -24,11 +24,11 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │  2. STATIC FIXTURE FILES (Go code)                              │
 │                                                                  │
-│  Location: swap/basis/data/                                     │
+│  Location: marketdata/                                          │
 │                                                                  │
 │  Files:                                                          │
-│  - fixtures_bgn_eur.go     ← BGN EUR curves (2025-11-21)       │
-│  - fixtures_lch_eur.go     ← LCH EUR curves (2025-11-20)       │
+│  - fixtures_bgn_euribor.go ← BGN EUR curves (example date)     │
+│  - fixtures_lch_euribor.go ← LCH EUR curves (example date)     │
 │  - fixtures_bgn_tibor.go   ← BGN TIBOR curves (2025-11-21)     │
 │                                                                  │
 │  Variables:                                                      │
@@ -47,19 +47,12 @@
 │  3. TEST PROGRAMS                                               │
 │                                                                  │
 │  cmd/basiscalc/main.go:                                         │
-│  import "github.com/meenmo/molib/swap/basis/data"               │
+│  import "github.com/meenmo/molib/marketdata"                    │
+│  import "github.com/meenmo/molib/instruments/swaps"             │
+│  import "github.com/meenmo/molib/swap"                          │
 │                                                                  │
-│  basis.CalculateSpread(                                         │
-│      curveDate,                                                  │
-│      10, 10,                                                     │
-│      benchmark.EURIBOR6MFloat,                                  │
-│      benchmark.EURIBOR3MFloat,                                  │
-│      benchmark.ESTRFloat,                                       │
-│      data.BGNEstr,         ← Uses fixture data                 │
-│      data.BGNEuribor6M,    ← Uses fixture data                 │
-│      data.BGNEuribor3M,    ← Uses fixture data                 │
-│      10_000_000.0,                                              │
-│  )                                                               │
+│  trade, _ := swap.InterestRateSwap(...)                          │
+│  spreadBP, _ := trade.SolveParSpread(swap.SpreadTargetRecLeg)    │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
                     (Passed to curve builder)
@@ -67,7 +60,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │  4. CURVE BOOTSTRAP (Runtime)                                   │
 │                                                                  │
-│  swap/basis/curve.go:                                           │
+│  swap/curve/curve.go:                                           │
 │                                                                  │
 │  BuildCurve(settlement, quotes, calendar, freqMonths)           │
 │    ↓                                                             │
@@ -85,7 +78,7 @@
 ## 🗂️ Current Data Files
 
 ### BGN EUR (2025-11-21)
-**File**: `swap/basis/data/fixtures_bgn_eur.go`
+**File**: `marketdata/fixtures_bgn_euribor.go`
 
 **Source**: Extracted from database on 2025-11-26
 ```sql
@@ -101,7 +94,7 @@ WHERE date='2025-11-21'
 - `BGNEuribor6M` - 39 tenors (6M to 50Y) ✅ **Fixed in Phase 5**
 
 ### LCH EUR (2025-11-20)
-**File**: `swap/basis/data/fixtures_lch_eur.go`
+**File**: `marketdata/fixtures_lch_euribor.go`
 
 **Source**: Extracted from database on 2025-11-27
 ```sql
@@ -117,7 +110,7 @@ WHERE date='2025-11-20'
 - `LCHEuribor6M` - 25 tenors
 
 ### BGN TIBOR (2025-11-21)
-**File**: `swap/basis/data/fixtures_bgn_tibor.go`
+**File**: `marketdata/fixtures_bgn_tibor.go`
 
 **Source**: Extracted from database on 2025-11-23
 
@@ -283,7 +276,7 @@ WHERE date='2025-11-21'
 " -t
 
 # Check fixture file
-grep '"10Y"' swap/basis/data/fixtures_bgn_eur.go
+grep '"10Y"' marketdata/fixtures_bgn_euribor.go
 ```
 
 Should match: `2.531`
