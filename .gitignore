@@ -1,0 +1,28 @@
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/parswapspread
+/basiscalc
+
+# Go build cache
+.gocache/
+
+# IDE
+.vscode/
+.idea/
+
+# Python virtual environment
+.venv/
+
+# AI assistants
+.claude/
+.codex/
+.gemini/
+.prompt/
+
+# Development only
+db/
+scripts/

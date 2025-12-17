@@ -1,0 +1,382 @@
+package swap
+
+import (
+	"fmt"
+	"math"
+	"reflect"
+	"time"
+
+	"github.com/meenmo/molib/calendar"
+	"github.com/meenmo/molib/swap/market"
+	"github.com/meenmo/molib/utils"
+)
+
+func isNilInterface(v any) bool {
+	if v == nil {
+		return true
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Ptr, reflect.Interface, reflect.Slice, reflect.Map, reflect.Func:
+		return rv.IsNil()
+	default:
+		return false
+	}
+}
+
+// SpotEffectiveMaturity computes spot (T+2), effective, and maturity dates from a trade date.
+//
+// Conventions:
+// - spot = tradeDate + 2 business days on cal
+// - effective = spot (+ forwardTenorYears, adjusted following)
+// - maturity = effective (+ swapTenorYears, adjusted following)
+func SpotEffectiveMaturity(tradeDate time.Time, cal calendar.CalendarID, forwardTenorYears, swapTenorYears int) (spot, effective, maturity time.Time) {
+	return SpotEffectiveMaturityWithSpotLag(tradeDate, cal, 2, forwardTenorYears, swapTenorYears)
+}
+
+// SpotEffectiveMaturityWithSpotLag computes spot (trade + spotLagBD), effective, and maturity dates from a trade date.
+//
+// Conventions:
+// - spot = tradeDate + spotLagBD business days on cal
+// - effective = spot (+ forwardTenorYears, adjusted following)
+// - maturity = effective (+ swapTenorYears, adjusted following)
+func SpotEffectiveMaturityWithSpotLag(tradeDate time.Time, cal calendar.CalendarID, spotLagBD, forwardTenorYears, swapTenorYears int) (spot, effective, maturity time.Time) {
+	spot = calendar.AddBusinessDays(cal, tradeDate, spotLagBD)
+
+	if forwardTenorYears > 0 {
+		effective = calendar.AdjustFollowing(cal, spot.AddDate(forwardTenorYears, 0, 0))
+	} else {
+		effective = spot
+	}
+	maturity = calendar.AdjustFollowing(cal, effective.AddDate(swapTenorYears, 0, 0))
+	return spot, effective, maturity
+}
+
+// GenerateSchedule builds the payment schedule for a leg.
+//
+// It returns business-day adjusted StartDate/EndDate/PayDate along with integer accrual days.
+func GenerateSchedule(effective, maturity time.Time, leg market.LegConvention) ([]SchedulePeriod, error) {
+	if maturity.Before(effective) {
+		return nil, fmt.Errorf("GenerateSchedule: maturity %s before effective %s", maturity.Format("2006-01-02"), effective.Format("2006-01-02"))
+	}
+	if leg.PayFrequency <= 0 {
+		return nil, fmt.Errorf("GenerateSchedule: unsupported pay frequency %d", leg.PayFrequency)
+	}
+
+	periods := make([]SchedulePeriod, 0, 64)
+	months := int(leg.PayFrequency)
+	start := effective
+	for {
+		var next time.Time
+		if leg.RollConvention == market.BackwardEOM {
+			next = utils.AddMonth(start, months)
+		} else {
+			next = start.AddDate(0, months, 0)
+		}
+		if next.After(maturity.AddDate(0, 0, 1)) {
+			break
+		}
+
+		accrualStart := calendar.Adjust(leg.Calendar, start)
+		accrualEnd := calendar.Adjust(leg.Calendar, next)
+
+		fixingDate := calendar.AddBusinessDays(leg.Calendar, accrualStart, -leg.FixingLagDays)
+		if leg.ResetPosition == market.ResetInArrears {
+			fixingDate = calendar.AddBusinessDays(leg.Calendar, accrualEnd, -(leg.RateCutoffDays + leg.FixingLagDays))
+		}
+
+		paymentDate := calendar.AddBusinessDays(leg.Calendar, accrualEnd, leg.PayDelayDays)
+
+		periods = append(periods, SchedulePeriod{
+			StartDate:   accrualStart,
+			EndDate:     accrualEnd,
+			PayDate:     paymentDate,
+			AccrualDays: int(utils.Days(accrualStart, accrualEnd)),
+			FixingDate:  fixingDate,
+		})
+
+		start = next
+	}
+
+	return periods, nil
+}
+
+// GetDiscountFactors returns discount factors for the given dates using the curve's interpolation rules.
+func GetDiscountFactors(curve DiscountCurve, dates []time.Time) ([]float64, error) {
+	if isNilInterface(curve) {
+		return nil, ErrNilCurve
+	}
+	dfs := make([]float64, len(dates))
+	for i, d := range dates {
+		dfs[i] = curve.DF(d)
+	}
+	return dfs, nil
+}
+
+// GetZeroRates returns continuously-compounded zero rates (in percent) for the given dates.
+func GetZeroRates(curve DiscountCurve, dates []time.Time) ([]float64, error) {
+	if isNilInterface(curve) {
+		return nil, ErrNilCurve
+	}
+	zeros := make([]float64, len(dates))
+	for i, d := range dates {
+		zeros[i] = curve.ZeroRateAt(d)
+	}
+	return zeros, nil
+}
+
+func forwardRate(projCurve ProjectionCurve, start, end time.Time, dayCount string) float64 {
+	dfStart := projCurve.DF(start)
+	dfEnd := projCurve.DF(end)
+	alpha := utils.YearFraction(start, end, dayCount)
+	if alpha == 0 {
+		return 0
+	}
+	return (dfStart/dfEnd - 1.0) / alpha
+}
+
+// GetForwardRates returns simple forward rates for each schedule period of a floating leg.
+//
+// Rate is returned as a decimal (e.g., 0.025 == 2.5%).
+func GetForwardRates(projCurve ProjectionCurve, effective, maturity time.Time, leg market.LegConvention) ([]ForwardRate, error) {
+	if isNilInterface(projCurve) {
+		return nil, ErrNilCurve
+	}
+	if leg.LegType != market.LegFloating {
+		return nil, fmt.Errorf("GetForwardRates: leg must be floating, got %s", leg.LegType)
+	}
+
+	periods, err := GenerateSchedule(effective, maturity, leg)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]ForwardRate, 0, len(periods))
+	for _, p := range periods {
+		r := forwardRate(projCurve, p.StartDate, p.EndDate, string(leg.DayCount))
+		out = append(out, ForwardRate{
+			FixingDate: p.FixingDate,
+			StartDate:  p.StartDate,
+			EndDate:    p.EndDate,
+			Rate:       r,
+		})
+	}
+	return out, nil
+}
+
+func validateSwapSpec(spec market.SwapSpec) error {
+	if spec.MaturityDate.Before(spec.EffectiveDate) {
+		return fmt.Errorf("maturity %s before effective %s", spec.MaturityDate.Format("2006-01-02"), spec.EffectiveDate.Format("2006-01-02"))
+	}
+	if spec.PayLeg.PayFrequency <= 0 || spec.RecLeg.PayFrequency <= 0 {
+		return fmt.Errorf("unsupported pay frequency (pay=%d, rec=%d)", spec.PayLeg.PayFrequency, spec.RecLeg.PayFrequency)
+	}
+	return nil
+}
+
+func legPV(
+	spec market.SwapSpec,
+	leg market.LegConvention,
+	projCurve ProjectionCurve,
+	discCurve DiscountCurve,
+	valuationDate time.Time,
+	spreadBP float64,
+	isPayLeg bool,
+) (float64, error) {
+	if isNilInterface(discCurve) {
+		return 0, ErrNilCurve
+	}
+	if leg.LegType == market.LegFloating && isNilInterface(projCurve) {
+		return 0, ErrNilCurve
+	}
+
+	periods, err := GenerateSchedule(spec.EffectiveDate, spec.MaturityDate, leg)
+	if err != nil {
+		return 0, err
+	}
+
+	spread := spreadBP * 1e-4
+
+	signCoupon := 1.0
+	if isPayLeg {
+		signCoupon = -1.0
+	}
+
+	totalPV := 0.0
+	for _, p := range periods {
+		if p.PayDate.Before(valuationDate) {
+			continue
+		}
+
+		accrual := utils.YearFraction(p.StartDate, p.EndDate, string(leg.DayCount))
+
+		base := 0.0
+		if leg.LegType == market.LegFloating {
+			base = forwardRate(projCurve, p.StartDate, p.EndDate, string(leg.DayCount))
+		}
+		rate := base + spread
+
+		payment := spec.Notional * accrual * rate
+		df := discCurve.DF(p.PayDate)
+		totalPV += signCoupon * payment * df
+	}
+
+	if leg.IncludeInitialPrincipal && !spec.EffectiveDate.Before(valuationDate) {
+		sign := -1.0
+		if isPayLeg {
+			sign = 1.0
+		}
+		totalPV += sign * spec.Notional * discCurve.DF(spec.EffectiveDate)
+	}
+	if leg.IncludeFinalPrincipal && !spec.MaturityDate.Before(valuationDate) {
+		sign := 1.0
+		if isPayLeg {
+			sign = -1.0
+		}
+		totalPV += sign * spec.Notional * discCurve.DF(spec.MaturityDate)
+	}
+
+	return totalPV, nil
+}
+
+// NPV calculates the net present value of a swap by summing discounted cashflows across both legs.
+func NPV(spec market.SwapSpec, projPay ProjectionCurve, projRec ProjectionCurve, discCurve DiscountCurve, valuationDate time.Time) (float64, error) {
+	if err := validateSwapSpec(spec); err != nil {
+		return 0, fmt.Errorf("NPV: %w", err)
+	}
+	if isNilInterface(discCurve) {
+		return 0, ErrNilCurve
+	}
+
+	pvPay, err := legPV(spec, spec.PayLeg, projPay, discCurve, valuationDate, spec.PayLegSpreadBP, true)
+	if err != nil {
+		return 0, fmt.Errorf("NPV: pay leg: %w", err)
+	}
+	pvRec, err := legPV(spec, spec.RecLeg, projRec, discCurve, valuationDate, spec.RecLegSpreadBP, false)
+	if err != nil {
+		return 0, fmt.Errorf("NPV: receive leg: %w", err)
+	}
+
+	return pvPay + pvRec, nil
+}
+
+// PVByLeg calculates discounted PVs for each leg and returns the net sum.
+func PVByLeg(spec market.SwapSpec, projPay ProjectionCurve, projRec ProjectionCurve, discCurve DiscountCurve, valuationDate time.Time) (PV, error) {
+	if err := validateSwapSpec(spec); err != nil {
+		return PV{}, fmt.Errorf("PVByLeg: %w", err)
+	}
+	if isNilInterface(discCurve) {
+		return PV{}, ErrNilCurve
+	}
+
+	pvPay, err := legPV(spec, spec.PayLeg, projPay, discCurve, valuationDate, spec.PayLegSpreadBP, true)
+	if err != nil {
+		return PV{}, fmt.Errorf("PVByLeg: pay leg: %w", err)
+	}
+	pvRec, err := legPV(spec, spec.RecLeg, projRec, discCurve, valuationDate, spec.RecLegSpreadBP, false)
+	if err != nil {
+		return PV{}, fmt.Errorf("PVByLeg: receive leg: %w", err)
+	}
+	return PV{
+		PayLegPV: pvPay,
+		RecLegPV: pvRec,
+		TotalPV:  pvPay + pvRec,
+	}, nil
+}
+
+func pv01TargetLegPerDec(spec market.SwapSpec, discCurve DiscountCurve, valuationDate time.Time, target SpreadTarget) (float64, error) {
+	if isNilInterface(discCurve) {
+		return 0, ErrNilCurve
+	}
+
+	var (
+		leg  market.LegConvention
+		sign float64
+	)
+	switch target {
+	case SpreadTargetPayLeg:
+		leg = spec.PayLeg
+		sign = -1.0
+	case SpreadTargetRecLeg:
+		leg = spec.RecLeg
+		sign = 1.0
+	default:
+		return 0, fmt.Errorf("pv01TargetLegPerDec: unknown target %d", target)
+	}
+
+	periods, err := GenerateSchedule(spec.EffectiveDate, spec.MaturityDate, leg)
+	if err != nil {
+		return 0, err
+	}
+
+	pv01 := 0.0
+	for _, p := range periods {
+		if p.PayDate.Before(valuationDate) {
+			continue
+		}
+		accrual := utils.YearFraction(p.StartDate, p.EndDate, string(leg.DayCount))
+		pv01 += sign * spec.Notional * accrual * discCurve.DF(p.PayDate)
+	}
+	return pv01, nil
+}
+
+// SolveParSpread finds the spread (in bp) on the target leg such that swap NPV equals 0.
+//
+// It uses Newton-Raphson with an analytically computed PV01 (the objective is linear in spread),
+// so it typically converges in a single iteration.
+func SolveParSpread(spec market.SwapSpec, projPay ProjectionCurve, projRec ProjectionCurve, discCurve DiscountCurve, valuationDate time.Time, target SpreadTarget) (float64, error) {
+	if err := validateSwapSpec(spec); err != nil {
+		return 0, fmt.Errorf("SolveParSpread: %w", err)
+	}
+	if isNilInterface(discCurve) {
+		return 0, ErrNilCurve
+	}
+
+	pv01Dec, err := pv01TargetLegPerDec(spec, discCurve, valuationDate, target)
+	if err != nil {
+		return 0, err
+	}
+	pv01PerBP := pv01Dec * 1e-4
+	if pv01PerBP == 0 {
+		return 0, fmt.Errorf("SolveParSpread: PV01 is zero for target leg")
+	}
+
+	spreadBP := spec.RecLegSpreadBP
+	if target == SpreadTargetPayLeg {
+		spreadBP = spec.PayLegSpreadBP
+	}
+
+	tolPV := 1e-10 * math.Max(1.0, math.Abs(spec.Notional))
+	maxIter := 10
+
+	for i := 0; i < maxIter; i++ {
+		tmp := spec
+		switch target {
+		case SpreadTargetPayLeg:
+			tmp.PayLegSpreadBP = spreadBP
+		case SpreadTargetRecLeg:
+			tmp.RecLegSpreadBP = spreadBP
+		default:
+			return 0, fmt.Errorf("SolveParSpread: unknown target %d", target)
+		}
+
+		npv, err := NPV(tmp, projPay, projRec, discCurve, valuationDate)
+		if err != nil {
+			return 0, err
+		}
+		if math.Abs(npv) <= tolPV {
+			return spreadBP, nil
+		}
+
+		spreadBP = spreadBP - npv/pv01PerBP
+	}
+
+	tmp := spec
+	if target == SpreadTargetPayLeg {
+		tmp.PayLegSpreadBP = spreadBP
+	} else {
+		tmp.RecLegSpreadBP = spreadBP
+	}
+	npv, _ := NPV(tmp, projPay, projRec, discCurve, valuationDate)
+	return spreadBP, fmt.Errorf("SolveParSpread: did not converge (spread=%.12f bp, npv=%.6g)", spreadBP, npv)
+}

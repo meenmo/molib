@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 
-	"github.com/meenmo/molib/marketdata/krx"
-	"github.com/meenmo/molib/swap"
+	"github.com/meenmo/molib/calendar"
+	krx "github.com/meenmo/molib/swap/clearinghouse/krx"
 )
 
 func main() {
-	quotes := swap.ParSwapQuotes{
+	quotes := krx.ParSwapQuotes{
 		0:    2.5524458035,
 		0.25: 2.7600000000,
 		0.5:  2.7225000000,
@@ -29,18 +29,18 @@ func main() {
 		20:   3.0946428571,
 	}
 
-	trade := swap.InterestRateSwap{
+	trade := krx.InterestRateSwap{
 		EffectiveDate:   "2024-01-25",
 		TerminationDate: "2044-01-25",
 		SettlementDate:  "2025-11-21",
 		FixedRate:       3.24,
 		Notional:        10000000000,
-		Direction:       swap.PositionReceive,
+		Direction:       krx.PositionReceive,
 		SwapQuotes:      quotes,
-		ReferenceRate:   krx.DefaultReferenceFeed(),
+		ReferenceRate:   calendar.DefaultReferenceFeed(),
 	}
 
-	curve := swap.BootstrapCurve(trade.SettlementDate, trade.SwapQuotes)
+	curve := krx.BootstrapCurve(trade.SettlementDate, trade.SwapQuotes)
 	fixedPV, floatPV := trade.PVByLeg(curve)
 
 	fmt.Printf("Fixed PV: %.2f\n", fixedPV)
