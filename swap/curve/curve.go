@@ -20,17 +20,15 @@ type Curve struct {
 	curveDayCount   string
 }
 
-// defaultCurveDayCount selects a time basis for curve construction
-// based on the calendar (i.e., currency).
+// defaultCurveDayCount returns the time basis for curve construction.
+// Following market convention (and QuantLib), the curve time axis uses ACT/365F
+// for interpolation and zero rate calculations, regardless of currency.
+// Note: Leg-specific day counts (ACT/360 for EUR, etc.) are used separately
+// for coupon accrual calculations.
 func defaultCurveDayCount(cal calendar.CalendarID) string {
-	switch cal {
-	case calendar.JPN:
-		return "ACT/365F"
-	case calendar.TARGET:
-		return "ACT/365F"
-	default:
-		return "ACT/365F"
-	}
+	// Use ACT/365F for curve time axis - this is the standard convention
+	// used by QuantLib and Bloomberg for discount curve interpolation.
+	return "ACT/365F"
 }
 
 // BuildCurve creates a par/zero curve using KRX-like bootstrap with 3M spacing.
@@ -646,12 +644,12 @@ func (c *Curve) evalIBORSwapNPV(quotedDates []time.Time, pseudoDF map[time.Time]
 
 	// Calculate fixed leg PV (pay fixed at parRate, discounted at OIS)
 	// Fixed leg frequency depends on currency:
-	// - TARGET (EUR): Annual (12M), ACT/360
+	// - TARGET (EUR): Annual (12M), 30E/360 (matches SWPM/ficclib for IBOR swap quotes)
 	// - JPN (JPY): Semi-Annual (6M), ACT/365F
 	fixedDayCount := "ACT/365F"
 	fixedFreqMonths := 12
 	if c.cal == calendar.TARGET {
-		fixedDayCount = "ACT/360"
+		fixedDayCount = "30E/360"
 		fixedFreqMonths = 12
 	} else if c.cal == calendar.JPN {
 		fixedDayCount = "ACT/365F"
@@ -694,6 +692,298 @@ func (c *Curve) evalIBORSwapNPV(quotedDates []time.Time, pseudoDF map[time.Time]
 	npv := floatPV - fixedPV
 
 	return npv, floatDerivative
+}
+
+// bootstrapDualCurveDiscountFactorsWithFloatFreq is like bootstrapDualCurveDiscountFactors but uses
+// a separate frequency for the floating leg during bootstrap (floatFreqMonths) rather than c.freqMonths.
+// This allows building a monthly-pillar curve while correctly evaluating 3M or 6M IBOR swaps.
+func (c *Curve) bootstrapDualCurveDiscountFactorsWithFloatFreq(oisCurve *Curve, floatFreqMonths int) map[time.Time]float64 {
+	pseudoDF := make(map[time.Time]float64)
+	dates := c.paymentDates
+
+	// First pillar at settlement has pseudo-DF = 1.0
+	pseudoDF[dates[0]] = 1.0
+
+	// Get quoted dates
+	dateToTenor := c.paymentDatesToTenor()
+	quotedDates := []time.Time{dates[0]}
+	for _, d := range dates[1:] {
+		tenor := dateToTenor[d]
+		if _, ok := c.parQuotes[tenor]; ok {
+			quotedDates = append(quotedDates, d)
+		}
+	}
+
+	// Bootstrap each quoted pillar sequentially
+	for i := 1; i < len(quotedDates); i++ {
+		maturity := quotedDates[i]
+		parRate := c.parRates[maturity]
+
+		// Solve for pseudo-DF at this maturity using Newton-Raphson
+		px := c.solvePseudoDiscountFactorWithFloatFreq(quotedDates[:i+1], pseudoDF, oisCurve, parRate, floatFreqMonths)
+
+		pseudoDF[maturity] = px
+	}
+
+	// Interpolate pseudo-DFs for all other payment dates using log-linear
+	for _, d := range dates {
+		if _, ok := pseudoDF[d]; !ok {
+			// Find adjacent quoted dates
+			var d1, d2 time.Time
+			for j := 0; j < len(quotedDates)-1; j++ {
+				if quotedDates[j].Before(d) && (d.Before(quotedDates[j+1]) || d.Equal(quotedDates[j+1])) {
+					d1 = quotedDates[j]
+					d2 = quotedDates[j+1]
+					break
+				}
+			}
+
+			// Handle dates beyond the last quoted date - use flat extrapolation
+			if d1.IsZero() && !d.Before(quotedDates[len(quotedDates)-1]) {
+				lastQuoted := quotedDates[len(quotedDates)-1]
+				pseudoDF[d] = pseudoDF[lastQuoted]
+				continue
+			}
+
+			if !d1.IsZero() && !d2.IsZero() {
+				df1 := pseudoDF[d1]
+				df2 := pseudoDF[d2]
+				t1 := utils.YearFraction(c.settlement, d1, c.curveDayCount)
+				t2 := utils.YearFraction(c.settlement, d2, c.curveDayCount)
+				tTarget := utils.YearFraction(c.settlement, d, c.curveDayCount)
+				forwardRate := math.Log(df1/df2) / (t2 - t1)
+				pseudoDF[d] = utils.RoundTo(df1*math.Exp(-forwardRate*(tTarget-t1)), 12)
+			}
+		}
+	}
+
+	return pseudoDF
+}
+
+// solvePseudoDiscountFactorWithFloatFreq solves for the IBOR pseudo-DF using the specified float leg frequency.
+func (c *Curve) solvePseudoDiscountFactorWithFloatFreq(quotedDates []time.Time, pseudoDF map[time.Time]float64, oisCurve *Curve, parRate float64, floatFreqMonths int) float64 {
+	maturity := quotedDates[len(quotedDates)-1]
+	prevPillar := quotedDates[len(quotedDates)-2]
+
+	// Initial guess: use previous pseudo DF
+	guess := pseudoDF[prevPillar]
+	if guess == 0 {
+		guess = oisCurve.DF(maturity)
+	}
+
+	// Newton-Raphson solver
+	tolerance := 1e-12
+	maxIter := 100
+
+	for iter := 0; iter < maxIter; iter++ {
+		// Calculate NPV and derivative using specified float frequency
+		npv, derivative := c.evalIBORSwapNPVWithFloatFreq(quotedDates, pseudoDF, oisCurve, parRate, guess, floatFreqMonths)
+
+		// Robust checks for NaN/Inf
+		if math.IsNaN(npv) || math.IsInf(npv, 0) || math.IsNaN(derivative) || math.IsInf(derivative, 0) {
+			guess = 0.9 * guess
+			if guess < 1e-9 {
+				guess = 1e-9
+			}
+			continue
+		}
+
+		if math.Abs(npv) < tolerance {
+			return guess
+		}
+
+		// Newton step
+		if math.Abs(derivative) < 1e-15 {
+			break
+		}
+
+		delta := npv / derivative
+
+		// Damping
+		if math.Abs(delta) > 0.5*guess {
+			delta = 0.5 * guess * (delta / math.Abs(delta))
+		}
+
+		guess = guess - delta
+
+		// Safety clamp
+		if math.IsNaN(guess) || guess <= 1e-9 {
+			guess = 1e-9
+		}
+	}
+
+	return guess
+}
+
+// evalIBORSwapNPVWithFloatFreq evaluates IBOR swap NPV using the specified floating leg frequency.
+func (c *Curve) evalIBORSwapNPVWithFloatFreq(quotedDates []time.Time, pseudoDF map[time.Time]float64, oisCurve *Curve, parRate float64, unknownPseudoDF float64, floatFreqMonths int) (float64, float64) {
+	start := quotedDates[0]
+	maturity := quotedDates[len(quotedDates)-1]
+
+	// Floating leg daycount: match currency conventions
+	floatDayCount := "ACT/365F"
+	if c.cal == calendar.TARGET {
+		floatDayCount = "ACT/360"
+	}
+
+	// Create temporary pseudo-DF map including the unknown value
+	tempPseudoDF := make(map[time.Time]float64)
+	for k, v := range pseudoDF {
+		tempPseudoDF[k] = v
+	}
+	tempPseudoDF[maturity] = unknownPseudoDF
+
+	// Calculate floating leg PV
+	floatPV := 0.0
+	floatDerivative := 0.0
+
+	// Generate floating periods using the specified frequency (not c.freqMonths)
+	floatingDates := []time.Time{start}
+	curr := start
+	for {
+		nextUnadj := curr.AddDate(0, floatFreqMonths, 0)
+		nextAdj := calendar.Adjust(c.cal, nextUnadj)
+
+		if nextAdj.After(maturity) && !nextAdj.Equal(maturity) {
+			break
+		}
+
+		floatingDates = append(floatingDates, nextAdj)
+
+		if nextAdj.Equal(maturity) {
+			break
+		}
+		curr = nextUnadj
+	}
+
+	// Force the last date to be maturity if it wasn't added
+	if !floatingDates[len(floatingDates)-1].Equal(maturity) {
+		floatingDates = append(floatingDates, maturity)
+	}
+
+	// Get previous pillar for interpolation derivative calculation
+	prevPillar := quotedDates[len(quotedDates)-2]
+
+	for i := 1; i < len(floatingDates); i++ {
+		periodStart := floatingDates[i-1]
+		periodEnd := floatingDates[i]
+		accrual := utils.YearFraction(periodStart, periodEnd, floatDayCount)
+
+		// Get pseudo-DFs at period boundaries (interpolate if needed)
+		pxStart := c.interpolatePseudoDiscountFactor(periodStart, tempPseudoDF, quotedDates)
+		pxEnd := c.interpolatePseudoDiscountFactor(periodEnd, tempPseudoDF, quotedDates)
+
+		// Forward rate
+		forward := (pxStart/pxEnd - 1.0) / accrual
+
+		// Discount at OIS
+		oisDF := oisCurve.DF(periodEnd)
+
+		// Cashflow PV
+		cf := forward * accrual * oisDF
+		floatPV += cf
+
+		// Derivative calculation: include contributions from all periods that depend on unknownPseudoDF
+		// For periods between prevPillar and maturity, the interpolated pseudo-DFs depend on the unknown
+		if periodEnd.After(prevPillar) {
+			// Calculate derivatives of pxStart and pxEnd w.r.t. unknownPseudoDF
+			dPxStart := c.interpolatePseudoDiscountFactorDerivative(periodStart, tempPseudoDF, quotedDates, maturity, unknownPseudoDF)
+			dPxEnd := c.interpolatePseudoDiscountFactorDerivative(periodEnd, tempPseudoDF, quotedDates, maturity, unknownPseudoDF)
+
+			// d(forward)/d(unknown) = (1/pxEnd * dPxStart - pxStart/pxEnd^2 * dPxEnd) / accrual
+			dForward := (dPxStart/pxEnd - pxStart*dPxEnd/(pxEnd*pxEnd)) / accrual
+			floatDerivative += accrual * oisDF * dForward
+		}
+	}
+
+	// Calculate fixed leg PV (pay fixed at parRate, discounted at OIS)
+	// - TARGET (EUR): Annual (12M), 30E/360 (matches SWPM/ficclib for IBOR swap quotes)
+	// - JPN (JPY): Semi-Annual (6M), ACT/365F
+	fixedDayCount := "ACT/365F"
+	fixedFreqMonths := 12
+	if c.cal == calendar.TARGET {
+		fixedDayCount = "30E/360"
+		fixedFreqMonths = 12
+	} else if c.cal == calendar.JPN {
+		fixedDayCount = "ACT/365F"
+		fixedFreqMonths = 6
+	}
+
+	fixedPV := 0.0
+	currUnadj := start
+	prevAdj := start
+
+	for {
+		currUnadj = currUnadj.AddDate(0, fixedFreqMonths, 0)
+		paymentDate := calendar.Adjust(c.cal, currUnadj)
+
+		if paymentDate.After(maturity) && !paymentDate.Equal(maturity) {
+			break
+		}
+
+		accrual := utils.YearFraction(prevAdj, paymentDate, fixedDayCount)
+		oisDF := oisCurve.DF(paymentDate)
+		fixedPV += oisDF * accrual * parRate
+
+		prevAdj = paymentDate
+
+		if paymentDate.Equal(maturity) {
+			break
+		}
+	}
+
+	// Handle case where we didn't hit maturity
+	if !prevAdj.Equal(maturity) {
+		accrual := utils.YearFraction(prevAdj, maturity, fixedDayCount)
+		oisDF := oisCurve.DF(maturity)
+		fixedPV += oisDF * accrual * parRate
+	}
+
+	// NPV = floatPV - fixedPV (receive float, pay fixed)
+	npv := floatPV - fixedPV
+
+	return npv, floatDerivative
+}
+
+// interpolatePseudoDiscountFactorDerivative calculates the derivative of the interpolated pseudo-DF
+// at target date with respect to the unknown pseudo-DF at maturity.
+// This is needed for Newton-Raphson convergence during bootstrap.
+func (c *Curve) interpolatePseudoDiscountFactorDerivative(target time.Time, pseudoDF map[time.Time]float64, quotedDates []time.Time, maturity time.Time, unknownPseudoDF float64) float64 {
+	// If target is exactly at maturity, derivative is 1
+	if target.Equal(maturity) {
+		return 1.0
+	}
+
+	// If target is at or before the previous pillar, it doesn't depend on unknownPseudoDF
+	prevPillar := quotedDates[len(quotedDates)-2]
+	if !target.After(prevPillar) {
+		return 0.0
+	}
+
+	// Target is between prevPillar and maturity, so it's interpolated and depends on unknownPseudoDF
+	// For log-linear interpolation: D(t) = D(prev)^(1-r) * D(mat)^r
+	// where r = (t - t_prev) / (t_mat - t_prev)
+	// Derivative: dD(t)/dD(mat) = r * D(t) / D(mat)
+
+	t1 := utils.YearFraction(c.settlement, prevPillar, c.curveDayCount)
+	t2 := utils.YearFraction(c.settlement, maturity, c.curveDayCount)
+	tTarget := utils.YearFraction(c.settlement, target, c.curveDayCount)
+
+	if t2 == t1 {
+		return 0.0
+	}
+
+	ratio := (tTarget - t1) / (t2 - t1)
+
+	// Get the interpolated pseudo-DF at target
+	pxTarget := c.interpolatePseudoDiscountFactor(target, pseudoDF, quotedDates)
+
+	// Safety check for unknownPseudoDF
+	if unknownPseudoDF <= 1e-9 {
+		return 0.0
+	}
+
+	return ratio * pxTarget / unknownPseudoDF
 }
 
 // interpolatePseudoDiscountFactor interpolates pseudo-DF at target date using log-linear interpolation
@@ -794,4 +1084,34 @@ func (c *Curve) DF(t time.Time) float64 {
 	z := c.ZeroRateAt(t)
 	yearFrac := utils.YearFraction(c.settlement, t, c.curveDayCount)
 	return math.Exp(-yearFrac * (z / 100.0))
+}
+
+// Settlement returns the curve's settlement date.
+func (c *Curve) Settlement() time.Time {
+	return c.settlement
+}
+
+// DayCount returns the curve's day count convention.
+func (c *Curve) DayCount() string {
+	return c.curveDayCount
+}
+
+// PillarDFs returns all bootstrapped discount factors keyed by date.
+// For diagnostic purposes only.
+func (c *Curve) PillarDFs() map[time.Time]float64 {
+	result := make(map[time.Time]float64)
+	for k, v := range c.discountFactors {
+		result[k] = v
+	}
+	return result
+}
+
+// PaymentDates returns the curve's payment date grid.
+func (c *Curve) PaymentDates() []time.Time {
+	return c.paymentDates
+}
+
+// ParQuotes returns the input par quotes (tenor -> rate%).
+func (c *Curve) ParQuotes() map[float64]float64 {
+	return c.parQuotes
 }

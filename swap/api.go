@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/meenmo/molib/calendar"
 	"github.com/meenmo/molib/swap/curve"
 	"github.com/meenmo/molib/swap/market"
 )
@@ -152,7 +153,11 @@ func InterestRateSwap(params InterestRateSwapParams) (*SwapTrade, error) {
 		)
 	}
 
-	disc := curve.BuildCurve(params.CurveDate, params.OISQuotes, params.DiscountingOIS.Calendar, 1)
+	// Curve settlement is spot date (curve date + spot lag), not the curve date itself.
+	// This matches the standard convention where quotes are for swaps starting at spot.
+	curveSettlement := calendar.AddBusinessDays(params.DiscountingOIS.Calendar, params.CurveDate, spotLag)
+
+	disc := curve.BuildCurve(curveSettlement, params.OISQuotes, params.DiscountingOIS.Calendar, 1)
 	if disc == nil {
 		return nil, fmt.Errorf("InterestRateSwap: failed to build discount curve")
 	}
@@ -167,7 +172,7 @@ func InterestRateSwap(params InterestRateSwapParams) (*SwapTrade, error) {
 		if quotes == nil {
 			return nil, fmt.Errorf("missing quotes for %s projection curve", leg.ReferenceRate)
 		}
-		return curve.BuildProjectionCurve(params.CurveDate, leg, quotes, disc), nil
+		return curve.BuildProjectionCurve(curveSettlement, leg, quotes, disc), nil
 	}
 
 	projPay, err := buildProj(params.PayLeg, params.PayLegQuotes)
