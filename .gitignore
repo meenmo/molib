@@ -26,3 +26,5 @@
 # Development only
 db/
 scripts/
+marketdata/
+examples/

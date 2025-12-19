@@ -166,12 +166,23 @@ func InterestRateSwap(params InterestRateSwapParams) (*SwapTrade, error) {
 		if leg.LegType != market.LegFloating {
 			return nil, nil
 		}
-		if market.IsOvernight(leg.ReferenceRate) {
-			return disc, nil
-		}
+		// For all floating legs, quotes must be provided explicitly
 		if quotes == nil {
 			return nil, fmt.Errorf("missing quotes for %s projection curve", leg.ReferenceRate)
 		}
+
+		// For overnight rates (OIS), build curve directly from quotes
+		if market.IsOvernight(leg.ReferenceRate) {
+			// Build OIS curve for this leg using provided quotes
+			// This enables OIS basis swaps (e.g., JSCC TONAR vs LCH TONAR)
+			oisCurve := curve.BuildCurve(curveSettlement, quotes, leg.Calendar, 1)
+			if oisCurve == nil {
+				return nil, fmt.Errorf("failed to build OIS projection curve for %s", leg.ReferenceRate)
+			}
+			return oisCurve, nil
+		}
+
+		// For IBOR rates, build projection curve with forward-discount basis adjustment
 		return curve.BuildProjectionCurve(curveSettlement, leg, quotes, disc), nil
 	}
 

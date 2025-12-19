@@ -66,6 +66,8 @@ func GenerateSchedule(effective, maturity time.Time, leg market.LegConvention) (
 	periods := make([]SchedulePeriod, 0, 64)
 	months := int(leg.PayFrequency)
 	start := effective
+	var prevAdjustedEnd time.Time // Track the previous period's adjusted end for chaining
+
 	for {
 		var next time.Time
 		if leg.RollConvention == market.BackwardEOM {
@@ -77,15 +79,37 @@ func GenerateSchedule(effective, maturity time.Time, leg market.LegConvention) (
 			break
 		}
 
-		accrualStart := calendar.Adjust(leg.Calendar, start)
+		// OIS swaps (overnight rates) use chained accrual periods per Bloomberg SWPM convention
+		isOIS := market.IsOvernight(leg.ReferenceRate)
+
+		// For OIS, chain from previous period's end; for others, use independent periods
+		var accrualStart time.Time
+		if isOIS && !prevAdjustedEnd.IsZero() {
+			accrualStart = prevAdjustedEnd
+		} else {
+			accrualStart = calendar.Adjust(leg.Calendar, start)
+		}
 		accrualEnd := calendar.Adjust(leg.Calendar, next)
+
+		// For OIS with PayDelayDays=0 (Bloomberg SWPM convention),
+		// the payment date IS the accrual end date
+		var paymentDate time.Time
+		if isOIS && leg.PayDelayDays == 0 {
+			paymentDate = accrualEnd
+			// No need to adjust accrualEnd, it's already the payment date
+		} else if isOIS {
+			// If there are payment delays, adjust the end date accordingly
+			paymentDate = calendar.AddBusinessDays(leg.Calendar, accrualEnd, leg.PayDelayDays)
+			accrualEnd = paymentDate // Use payment date as accrual end for OIS
+		} else {
+			// Standard convention (IBOR/Fixed): payment date is after accrual end
+			paymentDate = calendar.AddBusinessDays(leg.Calendar, accrualEnd, leg.PayDelayDays)
+		}
 
 		fixingDate := calendar.AddBusinessDays(leg.Calendar, accrualStart, -leg.FixingLagDays)
 		if leg.ResetPosition == market.ResetInArrears {
 			fixingDate = calendar.AddBusinessDays(leg.Calendar, accrualEnd, -(leg.RateCutoffDays + leg.FixingLagDays))
 		}
-
-		paymentDate := calendar.AddBusinessDays(leg.Calendar, accrualEnd, leg.PayDelayDays)
 
 		periods = append(periods, SchedulePeriod{
 			StartDate:   accrualStart,
@@ -95,6 +119,12 @@ func GenerateSchedule(effective, maturity time.Time, leg market.LegConvention) (
 			FixingDate:  fixingDate,
 		})
 
+		// Save the adjusted end for chaining (if OIS)
+		if isOIS {
+			prevAdjustedEnd = accrualEnd
+		}
+
+		// Always use the unadjusted date for the next iteration to avoid drift
 		start = next
 	}
 
