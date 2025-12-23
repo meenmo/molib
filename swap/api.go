@@ -99,6 +99,11 @@ type SwapTrade struct {
 	DiscountCurve DiscountCurve
 	PayProjCurve  ProjectionCurve
 	RecProjCurve  ProjectionCurve
+
+	// IsOISBasisSwap indicates this is an OIS basis swap where both legs reference
+	// the same overnight index but from different venues (e.g., LCHS vs JSCC TONAR).
+	// When true, SolveParSpread uses par rate difference instead of cross-curve NPV.
+	IsOISBasisSwap bool
 }
 
 func defaultSpotLagDays(ch ClearingHouse) int {
@@ -206,17 +211,23 @@ func InterestRateSwap(params InterestRateSwapParams) (*SwapTrade, error) {
 		RecLegSpreadBP: params.RecLegSpreadBP,
 	}
 
+	// Detect OIS basis swap: both legs are overnight rates with the same reference index
+	isOISBasisSwap := market.IsOvernight(params.PayLeg.ReferenceRate) &&
+		market.IsOvernight(params.RecLeg.ReferenceRate) &&
+		params.PayLeg.ReferenceRate == params.RecLeg.ReferenceRate
+
 	return &SwapTrade{
-		DataSource:    params.DataSource,
-		ClearingHouse: params.ClearingHouse,
-		CurveDate:     params.CurveDate,
-		TradeDate:     params.TradeDate,
-		ValuationDate: params.ValuationDate,
-		SpotDate:      spot,
-		Spec:          spec,
-		DiscountCurve: disc,
-		PayProjCurve:  projPay,
-		RecProjCurve:  projRec,
+		DataSource:     params.DataSource,
+		ClearingHouse:  params.ClearingHouse,
+		CurveDate:      params.CurveDate,
+		TradeDate:      params.TradeDate,
+		ValuationDate:  params.ValuationDate,
+		SpotDate:       spot,
+		Spec:           spec,
+		DiscountCurve:  disc,
+		PayProjCurve:   projPay,
+		RecProjCurve:   projRec,
+		IsOISBasisSwap: isOISBasisSwap,
 	}, nil
 }
 
@@ -231,10 +242,26 @@ func (t *SwapTrade) PVByLeg() (PV, error) {
 }
 
 // SolveParSpread solves for the target leg spread (in bp) such that NPV = 0, and updates the trade spec.
+//
+// For OIS basis swaps (same overnight index, different venues), it computes the difference
+// in par swap rates between the two curves instead of using cross-curve NPV optimization.
 func (t *SwapTrade) SolveParSpread(target SpreadTarget) (float64, PV, error) {
-	spreadBP, err := SolveParSpread(t.Spec, t.PayProjCurve, t.RecProjCurve, t.DiscountCurve, t.ValuationDate, target)
-	if err != nil {
-		return 0, PV{}, err
+	var spreadBP float64
+	var err error
+
+	if t.IsOISBasisSwap {
+		// For OIS basis swaps, compute the difference in par rates between the two curves.
+		// Both par rates use the same discount curve (t.DiscountCurve) but different projection curves.
+		// The basis is: pay curve par rate - rec curve par rate
+		spreadBP, err = SolveOISBasisSpread(t.Spec, t.PayProjCurve.(DiscountCurve), t.RecProjCurve.(DiscountCurve), t.DiscountCurve, t.ValuationDate)
+		if err != nil {
+			return 0, PV{}, err
+		}
+	} else {
+		spreadBP, err = SolveParSpread(t.Spec, t.PayProjCurve, t.RecProjCurve, t.DiscountCurve, t.ValuationDate, target)
+		if err != nil {
+			return 0, PV{}, err
+		}
 	}
 
 	switch target {

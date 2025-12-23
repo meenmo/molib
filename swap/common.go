@@ -410,3 +410,60 @@ func SolveParSpread(spec market.SwapSpec, projPay ProjectionCurve, projRec Proje
 	npv, _ := NPV(tmp, projPay, projRec, discCurve, valuationDate)
 	return spreadBP, fmt.Errorf("SolveParSpread: did not converge (spread=%.12f bp, npv=%.6g)", spreadBP, npv)
 }
+
+// ComputeOISParRateWithDiscount computes the par swap rate (in decimal) for an OIS leg
+// using a separate projection curve and discount curve.
+// Par rate = sum(fwd_proj * accrual * df_disc) / sum(accrual * df_disc)
+func ComputeOISParRateWithDiscount(spec market.SwapSpec, projCurve, discCurve DiscountCurve, valuationDate time.Time, leg market.LegConvention) (float64, error) {
+	if isNilInterface(projCurve) || isNilInterface(discCurve) {
+		return 0, ErrNilCurve
+	}
+
+	periods, err := GenerateSchedule(spec.EffectiveDate, spec.MaturityDate, leg)
+	if err != nil {
+		return 0, err
+	}
+
+	floatLegPV := 0.0
+	annuity := 0.0
+
+	for _, p := range periods {
+		if p.PayDate.Before(valuationDate) {
+			continue
+		}
+		accrual := utils.YearFraction(p.StartDate, p.EndDate, string(leg.DayCount))
+		df := discCurve.DF(p.PayDate)
+		fwd := forwardRate(projCurve, p.StartDate, p.EndDate, string(leg.DayCount))
+		floatLegPV += fwd * accrual * df
+		annuity += accrual * df
+	}
+
+	if annuity == 0 {
+		return 0, fmt.Errorf("ComputeOISParRateWithDiscount: annuity is zero")
+	}
+
+	return floatLegPV / annuity, nil
+}
+
+// SolveOISBasisSpread computes the basis spread (in bp) between two OIS curves.
+// This is the difference in par swap rates: payLegCurve par rate - recLegCurve par rate.
+// Both par rates are computed using the same discount curve (discCurve).
+// Used for OIS basis swaps where both legs reference the same overnight index
+// but from different venues (e.g., LCHS vs JSCC TONAR).
+func SolveOISBasisSpread(spec market.SwapSpec, payProjCurve, recProjCurve, discCurve DiscountCurve, valuationDate time.Time) (float64, error) {
+	// Pay leg par rate: projection from payProjCurve, discount from discCurve
+	payParRate, err := ComputeOISParRateWithDiscount(spec, payProjCurve, discCurve, valuationDate, spec.PayLeg)
+	if err != nil {
+		return 0, fmt.Errorf("SolveOISBasisSpread: pay leg: %w", err)
+	}
+
+	// Rec leg par rate: projection from recProjCurve, discount from discCurve
+	recParRate, err := ComputeOISParRateWithDiscount(spec, recProjCurve, discCurve, valuationDate, spec.RecLeg)
+	if err != nil {
+		return 0, fmt.Errorf("SolveOISBasisSpread: rec leg: %w", err)
+	}
+
+	// Basis = pay leg par rate - rec leg par rate, in bp
+	basisBP := (payParRate - recParRate) * 10000
+	return basisBP, nil
+}
