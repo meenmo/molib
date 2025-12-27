@@ -18,6 +18,7 @@ type Curve struct {
 	cal             calendar.CalendarID
 	freqMonths      int
 	curveDayCount   string
+	fixedLegDC      FixedLegDayCount // day count for fixed leg during bootstrap
 }
 
 // defaultCurveDayCount returns the time basis for curve construction.
@@ -31,7 +32,16 @@ func defaultCurveDayCount(cal calendar.CalendarID) string {
 	return "ACT/365F"
 }
 
+// FixedLegDayCount specifies the day count convention for the fixed leg during bootstrap.
+type FixedLegDayCount string
+
+const (
+	FixedLegDayCountOIS  FixedLegDayCount = "OIS"  // ACT/360 for EUR, ACT/365F for JPY (OIS convention)
+	FixedLegDayCountIBOR FixedLegDayCount = "IBOR" // 30/360 for EUR, ACT/365F for JPY (IBOR IRS convention)
+)
+
 // BuildCurve creates a par/zero curve using KRX-like bootstrap with 3M spacing.
+// Uses OIS conventions (ACT/360 for EUR) for the fixed leg.
 func BuildCurve(settlement time.Time, quotes map[string]float64, cal calendar.CalendarID, freqMonths int) *Curve {
 	parsed := make(map[float64]float64)
 	for k, v := range quotes {
@@ -43,6 +53,31 @@ func BuildCurve(settlement time.Time, quotes map[string]float64, cal calendar.Ca
 		cal:           cal,
 		freqMonths:    freqMonths,
 		curveDayCount: defaultCurveDayCount(cal),
+		fixedLegDC:    FixedLegDayCountOIS,
+	}
+	c.paymentDates = c.generatePaymentDates()
+	c.parRates = c.buildParCurve()
+	c.discountFactors = c.bootstrapDiscountFactors()
+	c.zeros = c.buildZero()
+	return c
+}
+
+// BuildIBORDiscountCurve creates a discount curve from IBOR swap quotes.
+// Uses IBOR IRS conventions (30/360 for EUR fixed leg) instead of OIS conventions.
+// This is appropriate for pre-2020 IBOR discounting where swaps were discounted
+// at the same IBOR rate (e.g., EURIBOR 6M discounting for EUR swaps).
+func BuildIBORDiscountCurve(settlement time.Time, quotes map[string]float64, cal calendar.CalendarID, freqMonths int) *Curve {
+	parsed := make(map[float64]float64)
+	for k, v := range quotes {
+		parsed[tenorToYears(k)] = v
+	}
+	c := &Curve{
+		settlement:    settlement,
+		parQuotes:     parsed,
+		cal:           cal,
+		freqMonths:    freqMonths,
+		curveDayCount: defaultCurveDayCount(cal),
+		fixedLegDC:    FixedLegDayCountIBOR,
 	}
 	c.paymentDates = c.generatePaymentDates()
 	c.parRates = c.buildParCurve()
@@ -238,12 +273,13 @@ type oisCoupon struct {
 
 // buildOISCoupons generates fixed leg coupons for an OIS from settlement to maturity.
 // It assumes annual coupons (common for TONAR/ESTR) and applies currency-specific conventions.
+// The day count convention depends on c.fixedLegDC:
+//   - FixedLegDayCountOIS: ACT/360 for EUR (OIS convention)
+//   - FixedLegDayCountIBOR: 30/360 for EUR (IBOR IRS convention)
 func (c *Curve) buildOISCoupons(maturity time.Time) []oisCoupon {
 	coupons := []oisCoupon{}
-	start := c.settlement
-	current := start
 
-	// Determine conventions based on calendar
+	// Determine conventions based on calendar and fixedLegDC
 	payDelay := 0
 	accrualDC := "ACT/365F" // Default
 
@@ -251,36 +287,46 @@ func (c *Curve) buildOISCoupons(maturity time.Time) []oisCoupon {
 		payDelay = 2
 		accrualDC = "ACT/365F"
 	} else if c.cal == calendar.TARGET {
-		payDelay = 1
-		accrualDC = "ACT/360"
-	}
-
-	// Generate annual coupons
-	for {
-		// Move forward 1 year
-		nextUnadj := current.AddDate(1, 0, 0)
-
-		// Check if we reached or passed maturity
-		if !nextUnadj.Before(maturity) {
-			break
+		// Use 30/360 for IBOR discounting, ACT/360 for OIS
+		if c.fixedLegDC == FixedLegDayCountIBOR {
+			accrualDC = "30/360"
+			// EUR IBOR IRS fixed legs pay on accrual end date (no payment lag).
+			payDelay = 0
+		} else {
+			accrualDC = "ACT/360"
+			// EUR OIS fixed legs typically pay T+1 (ESTR convention).
+			payDelay = 1
 		}
-
-		// Intermediate coupon
-		accrualEnd := calendar.Adjust(c.cal, nextUnadj)
-		payDate := calendar.AddBusinessDays(c.cal, accrualEnd, payDelay)
-		alpha := utils.YearFraction(start, accrualEnd, accrualDC)
-
-		coupons = append(coupons, oisCoupon{PaymentDate: payDate, Accrual: alpha})
-
-		start = accrualEnd
-		current = nextUnadj
 	}
 
-	// Final coupon ending at maturity
-	// Note: 'maturity' passed here is usually an adjusted date from the grid
-	payDate := calendar.AddBusinessDays(c.cal, maturity, payDelay)
-	alpha := utils.YearFraction(start, maturity, accrualDC)
-	coupons = append(coupons, oisCoupon{PaymentDate: payDate, Accrual: alpha})
+	// Use backward schedule generation (Bloomberg SWPM convention) to avoid date drift
+	// from repeated Modified Following adjustments.
+	//
+	// This is especially important for EUR IBOR/IRS discount curves where annual fixed coupons
+	// must align to the swap maturity date.
+	months := 12
+
+	// Build unadjusted dates rolling backward from maturity.
+	unadjustedDates := []time.Time{}
+	current := maturity
+	for current.After(c.settlement) {
+		unadjustedDates = append([]time.Time{current}, unadjustedDates...)
+		current = utils.AddMonth(current, -months)
+	}
+	unadjustedDates = append([]time.Time{c.settlement}, unadjustedDates...)
+
+	// Build coupons from consecutive date pairs.
+	for i := 0; i < len(unadjustedDates)-1; i++ {
+		startUnadj := unadjustedDates[i]
+		endUnadj := unadjustedDates[i+1]
+
+		accrualStart := calendar.Adjust(c.cal, startUnadj)
+		accrualEnd := calendar.Adjust(c.cal, endUnadj)
+		payDate := calendar.AddBusinessDays(c.cal, accrualEnd, payDelay)
+
+		alpha := utils.YearFraction(accrualStart, accrualEnd, accrualDC)
+		coupons = append(coupons, oisCoupon{PaymentDate: payDate, Accrual: alpha})
+	}
 
 	return coupons
 }
@@ -366,7 +412,7 @@ func (c *Curve) getKnownDF(t time.Time, df map[time.Time]float64, quotedDates []
 		return df[quotedDates[0]] // Fallback
 	}
 
-	// Interpolate
+	// Interpolate log-linearly.
 	df1 := df[d1]
 	df2 := df[d2]
 	t1 := utils.YearFraction(c.settlement, d1, c.curveDayCount)
@@ -382,17 +428,7 @@ func (c *Curve) getKnownDF(t time.Time, df map[time.Time]float64, quotedDates []
 func (c *Curve) interpolateUnknownDF(t, start time.Time, dfStart float64, end time.Time, x float64) (float64, float64) {
 	// Log-linear interpolation:
 	// D(t) = D(start) * (D(end)/D(start)) ^ ratio
-	// ratio = (t - start) / (end - start)
-	// Let r = ratio.
-	// D(t) = dfStart * (x / dfStart) ^ r
-	//      = dfStart * x^r * dfStart^(-r)
-	//      = dfStart^(1-r) * x^r
-
-	// Derivative dD(t)/dx:
-	// = dfStart^(1-r) * r * x^(r-1)
-	// = r * (dfStart^(1-r) * x^r) / x
-	// = r * D(t) / x
-
+	// ratio = (t - start) / (end - start) in curve time.
 	tStart := utils.YearFraction(c.settlement, start, c.curveDayCount)
 	tEnd := utils.YearFraction(c.settlement, end, c.curveDayCount)
 	tTarget := utils.YearFraction(c.settlement, t, c.curveDayCount)
@@ -1074,16 +1110,31 @@ func (c *Curve) ZeroRateAt(t time.Time) float64 {
 	if z, ok := c.zeros[t]; ok {
 		return z
 	}
-	d1, d2 := utils.AdjacentDates(t, c.paymentDates)
-	r1 := c.zeros[d1]
-	r2 := c.zeros[d2]
-	return utils.RoundTo(r1+(r2-r1)*utils.Days(d1, t)/utils.Days(d1, d2), 12)
+	df := c.DF(t)
+	yearFrac := utils.YearFraction(c.settlement, t, c.curveDayCount)
+	if yearFrac == 0 {
+		return 0
+	}
+	return utils.RoundTo(-math.Log(df)/yearFrac*100, 12)
 }
 
 func (c *Curve) DF(t time.Time) float64 {
-	z := c.ZeroRateAt(t)
-	yearFrac := utils.YearFraction(c.settlement, t, c.curveDayCount)
-	return math.Exp(-yearFrac * (z / 100.0))
+	if df, ok := c.discountFactors[t]; ok {
+		return df
+	}
+	d1, d2 := utils.AdjacentDates(t, c.paymentDates)
+	df1 := c.discountFactors[d1]
+	df2 := c.discountFactors[d2]
+
+	t1 := utils.YearFraction(c.settlement, d1, c.curveDayCount)
+	t2 := utils.YearFraction(c.settlement, d2, c.curveDayCount)
+	tTarget := utils.YearFraction(c.settlement, t, c.curveDayCount)
+
+	if t2 == t1 {
+		return df1
+	}
+	forwardRate := math.Log(df1/df2) / (t2 - t1)
+	return utils.RoundTo(df1*math.Exp(-forwardRate*(tTarget-t1)), 12)
 }
 
 // Settlement returns the curve's settlement date.

@@ -1,0 +1,11 @@
+# Temporary/local scripts
+tmp/
+scripts/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Binaries
+parswapspread

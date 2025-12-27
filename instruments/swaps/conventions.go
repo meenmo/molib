@@ -54,13 +54,14 @@ var (
 		ResetFrequency:          market.FreqQuarterly,
 		PayFrequency:            market.FreqQuarterly,
 		FixingLagDays:           2,
-		PayDelayDays:            2,
+		PayDelayDays:            0,
 		BusinessDayAdjustment:   market.ModifiedFollowing,
 		RollConvention:          market.BackwardEOM,
 		Calendar:                calendar.TARGET,
 		ResetPosition:           market.ResetInAdvance,
 		IncludeInitialPrincipal: true,
 		IncludeFinalPrincipal:   true,
+		ScheduleDirection:       market.ScheduleBackward,
 	}
 
 	EURIBOR6MFloat = market.LegConvention{
@@ -70,13 +71,14 @@ var (
 		ResetFrequency:          market.FreqSemi,
 		PayFrequency:            market.FreqSemi,
 		FixingLagDays:           2,
-		PayDelayDays:            2,
+		PayDelayDays:            0,
 		BusinessDayAdjustment:   market.ModifiedFollowing,
 		RollConvention:          market.BackwardEOM,
 		Calendar:                calendar.TARGET,
 		ResetPosition:           market.ResetInAdvance,
 		IncludeInitialPrincipal: true,
 		IncludeFinalPrincipal:   true,
+		ScheduleDirection:       market.ScheduleBackward,
 	}
 
 	TONARFloat = market.LegConvention{
@@ -129,7 +131,7 @@ var (
 	}
 
 	// EUR IRS fixed leg: annual payments, ACT/360, TARGET calendar.
-	// This mirrors ficclib's EUR_IRS_FIXED convention.
+	// This mirrors ficclib's EUR_IRS_FIXED convention for OIS.
 	EurFixedAnnual = market.LegConvention{
 		LegType:               market.LegFixed,
 		DayCount:              market.Act360,
@@ -139,6 +141,20 @@ var (
 		BusinessDayAdjustment: market.ModifiedFollowing,
 		RollConvention:        market.BackwardEOM,
 		Calendar:              calendar.TARGET,
+	}
+
+	// EUR IBOR IRS fixed leg: annual payments, 30/360, TARGET calendar.
+	// Used for EURIBOR swaps (pre-2020 IBOR discounting) where fixed leg uses 30/360.
+	Euribor6MFixed = market.LegConvention{
+		LegType:               market.LegFixed,
+		DayCount:              market.Dc30360,
+		PayFrequency:          market.FreqAnnual,
+		FixingLagDays:         0,
+		PayDelayDays:          2,
+		BusinessDayAdjustment: market.ModifiedFollowing,
+		RollConvention:        market.BackwardEOM,
+		Calendar:              calendar.TARGET,
+		ScheduleDirection:     market.ScheduleBackward,
 	}
 
 	// JPY IRS fixed leg: semiannual payments, ACT/365F, JPN calendar.
