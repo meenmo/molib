@@ -47,6 +47,15 @@ const (
 	ResetInArrears ResetPosition = "IN_ARREARS"
 )
 
+// ScheduleDirection indicates whether periods are generated forward from effective
+// or backward from maturity (Bloomberg SWPM convention for IBOR swaps).
+type ScheduleDirection string
+
+const (
+	ScheduleForward  ScheduleDirection = "FORWARD"  // Roll from effective date (default)
+	ScheduleBackward ScheduleDirection = "BACKWARD" // Roll from maturity date (Bloomberg convention)
+)
+
 // DayCount enum.
 type DayCount string
 
@@ -73,6 +82,7 @@ type LegConvention struct {
 	RateCutoffDays          int
 	IncludeInitialPrincipal bool
 	IncludeFinalPrincipal   bool
+	ScheduleDirection       ScheduleDirection // FORWARD (default) or BACKWARD (Bloomberg convention)
 }
 
 // SwapSpec describes a basis swap trade.

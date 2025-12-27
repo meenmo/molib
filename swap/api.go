@@ -162,7 +162,15 @@ func InterestRateSwap(params InterestRateSwapParams) (*SwapTrade, error) {
 	// This matches the standard convention where quotes are for swaps starting at spot.
 	curveSettlement := calendar.AddBusinessDays(params.DiscountingOIS.Calendar, params.CurveDate, spotLag)
 
-	disc := curve.BuildCurve(curveSettlement, params.OISQuotes, params.DiscountingOIS.Calendar, 1)
+	// Build discount curve: use IBOR conventions (30/360 for EUR) if discounting with IBOR rate,
+	// or OIS conventions (ACT/360 for EUR) if discounting with overnight rate.
+	var disc *curve.Curve
+	if market.IsOvernight(params.DiscountingOIS.ReferenceRate) {
+		disc = curve.BuildCurve(curveSettlement, params.OISQuotes, params.DiscountingOIS.Calendar, 1)
+	} else {
+		// IBOR discounting (pre-2020 convention): use 30/360 for EUR fixed leg
+		disc = curve.BuildIBORDiscountCurve(curveSettlement, params.OISQuotes, params.DiscountingOIS.Calendar, 1)
+	}
 	if disc == nil {
 		return nil, fmt.Errorf("InterestRateSwap: failed to build discount curve")
 	}
@@ -187,7 +195,14 @@ func InterestRateSwap(params InterestRateSwapParams) (*SwapTrade, error) {
 			return oisCurve, nil
 		}
 
-		// For IBOR rates, build projection curve with forward-discount basis adjustment
+		// For IBOR discounting (single-curve), if the leg index matches the discounting index,
+		// use the discount curve directly for projection (PV of the par float leg reduces to DF(start)-DF(end)).
+		if !market.IsOvernight(params.DiscountingOIS.ReferenceRate) &&
+			leg.ReferenceRate == params.DiscountingOIS.ReferenceRate {
+			return disc, nil
+		}
+
+		// For IBOR rates with a different discounting curve, build a projection curve with forward-discount basis adjustment.
 		return curve.BuildProjectionCurve(curveSettlement, leg, quotes, disc), nil
 	}
 

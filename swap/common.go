@@ -55,6 +55,8 @@ func SpotEffectiveMaturityWithSpotLag(tradeDate time.Time, cal calendar.Calendar
 // GenerateSchedule builds the payment schedule for a leg.
 //
 // It returns business-day adjusted StartDate/EndDate/PayDate along with integer accrual days.
+// When leg.ScheduleDirection is ScheduleBackward, periods are generated from maturity
+// backward (Bloomberg SWPM convention for IBOR swaps), creating a front stub if needed.
 func GenerateSchedule(effective, maturity time.Time, leg market.LegConvention) ([]SchedulePeriod, error) {
 	if maturity.Before(effective) {
 		return nil, fmt.Errorf("GenerateSchedule: maturity %s before effective %s", maturity.Format("2006-01-02"), effective.Format("2006-01-02"))
@@ -63,6 +65,17 @@ func GenerateSchedule(effective, maturity time.Time, leg market.LegConvention) (
 		return nil, fmt.Errorf("GenerateSchedule: unsupported pay frequency %d", leg.PayFrequency)
 	}
 
+	// Use backward generation if specified (Bloomberg SWPM convention for IBOR)
+	if leg.ScheduleDirection == market.ScheduleBackward {
+		return generateScheduleBackward(effective, maturity, leg)
+	}
+
+	// Default: forward generation from effective date
+	return generateScheduleForward(effective, maturity, leg)
+}
+
+// generateScheduleForward generates periods rolling forward from effective date.
+func generateScheduleForward(effective, maturity time.Time, leg market.LegConvention) ([]SchedulePeriod, error) {
 	periods := make([]SchedulePeriod, 0, 64)
 	months := int(leg.PayFrequency)
 	start := effective
@@ -126,6 +139,68 @@ func GenerateSchedule(effective, maturity time.Time, leg market.LegConvention) (
 
 		// Always use the unadjusted date for the next iteration to avoid drift
 		start = next
+	}
+
+	return periods, nil
+}
+
+// generateScheduleBackward generates periods rolling backward from maturity date.
+// This matches Bloomberg SWPM convention for IBOR swaps, where intermediate dates
+// align with maturity and the first period becomes a front stub if needed.
+func generateScheduleBackward(effective, maturity time.Time, leg market.LegConvention) ([]SchedulePeriod, error) {
+	months := int(leg.PayFrequency)
+
+	// Generate unadjusted dates backward from maturity
+	// Stop when we reach or pass effective date
+	var unadjustedDates []time.Time
+	current := maturity
+	for current.After(effective) {
+		unadjustedDates = append([]time.Time{current}, unadjustedDates...)
+		if leg.RollConvention == market.BackwardEOM {
+			current = utils.AddMonth(current, -months)
+		} else {
+			current = current.AddDate(0, -months, 0)
+		}
+	}
+
+	// If the first backward-rolled date is very close to effective (within 7 days),
+	// skip it to avoid creating a tiny stub period (Bloomberg convention).
+	// The first period will be a long stub from effective to the next regular date.
+	if len(unadjustedDates) > 0 {
+		firstDate := unadjustedDates[0]
+		daysDiff := int(utils.Days(effective, firstDate))
+		if daysDiff > 0 && daysDiff <= 7 {
+			// Skip the first backward-rolled date (it's too close to effective)
+			unadjustedDates = unadjustedDates[1:]
+		}
+	}
+
+	// Prepend effective date as the start of the first (potentially stub) period
+	unadjustedDates = append([]time.Time{effective}, unadjustedDates...)
+
+	// Build periods from consecutive date pairs
+	periods := make([]SchedulePeriod, 0, len(unadjustedDates)-1)
+	for i := 0; i < len(unadjustedDates)-1; i++ {
+		startUnadj := unadjustedDates[i]
+		endUnadj := unadjustedDates[i+1]
+
+		accrualStart := calendar.Adjust(leg.Calendar, startUnadj)
+		accrualEnd := calendar.Adjust(leg.Calendar, endUnadj)
+
+		paymentDate := calendar.AddBusinessDays(leg.Calendar, accrualEnd, leg.PayDelayDays)
+
+		fixingDate := calendar.AddBusinessDays(leg.Calendar, accrualStart, -leg.FixingLagDays)
+		if leg.ResetPosition == market.ResetInArrears {
+			fixingDate = calendar.AddBusinessDays(leg.Calendar, accrualEnd, -(leg.RateCutoffDays + leg.FixingLagDays))
+		}
+
+		periods = append(periods, SchedulePeriod{
+			StartDate:   accrualStart,
+			EndDate:     accrualEnd,
+			PayDate:     paymentDate,
+			AccrualDays: int(utils.Days(accrualStart, accrualEnd)),
+			FixingDate:  fixingDate,
+		})
 	}
 
 	return periods, nil
