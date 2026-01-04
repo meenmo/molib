@@ -150,7 +150,7 @@ var (
 		DayCount:              market.Dc30360,
 		PayFrequency:          market.FreqAnnual,
 		FixingLagDays:         0,
-		PayDelayDays:          2,
+		PayDelayDays:          0,
 		BusinessDayAdjustment: market.ModifiedFollowing,
 		RollConvention:        market.BackwardEOM,
 		Calendar:              calendar.TARGET,
