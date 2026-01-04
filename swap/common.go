@@ -38,13 +38,17 @@ func SpotEffectiveMaturity(tradeDate time.Time, cal calendar.CalendarID, forward
 //
 // Conventions:
 // - spot = tradeDate + spotLagBD business days on cal
-// - effective = spot (+ forwardTenorYears, adjusted following)
+// - if forwardTenorYears == 0: effective = spot
+// - if forwardTenorYears > 0: effective = (tradeDate + forwardTenorYears, adjusted following) + spotLagBD business days
 // - maturity = effective (+ swapTenorYears, adjusted following)
 func SpotEffectiveMaturityWithSpotLag(tradeDate time.Time, cal calendar.CalendarID, spotLagBD, forwardTenorYears, swapTenorYears int) (spot, effective, maturity time.Time) {
 	spot = calendar.AddBusinessDays(cal, tradeDate, spotLagBD)
 
 	if forwardTenorYears > 0 {
-		effective = calendar.AdjustFollowing(cal, spot.AddDate(forwardTenorYears, 0, 0))
+		// Bloomberg SWPM "XxY" forward-start convention matches swaption-style starts:
+		// start date is spot-lagged from the forward date (not spot date + forwardTenor).
+		fwd := calendar.AdjustFollowing(cal, tradeDate.AddDate(forwardTenorYears, 0, 0))
+		effective = calendar.AddBusinessDays(cal, fwd, spotLagBD)
 	} else {
 		effective = spot
 	}
