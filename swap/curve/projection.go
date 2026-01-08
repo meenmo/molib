@@ -43,7 +43,7 @@ func BuildDualCurveWithFreq(settlement time.Time, iborQuotes map[string]float64,
 	}
 	c.paymentDates = c.generatePaymentDates()
 	c.parRates = c.buildParCurve()
-	c.discountFactors = c.bootstrapDualCurveDiscountFactorsWithFloatFreq(oisCurve, floatFreqMonths)
+	c.discountFactors = c.bootstrapDualCurve(oisCurve, floatFreqMonths)
 	c.zeros = c.buildZero()
 	return c
 }

@@ -996,9 +996,10 @@ var jpnHolidayList = []string{
 	"2060-12-31",
 }
 
+func initJpnHolidays() {
+	jpnHolidays = buildHolidayMap(jpnHolidayList)
+}
+
 func init() {
-	jpnHolidays = make(map[string]struct{}, len(jpnHolidayList))
-	for _, h := range jpnHolidayList {
-		jpnHolidays[h] = struct{}{}
-	}
+	initJpnHolidays()
 }

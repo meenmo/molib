@@ -12,18 +12,22 @@ const (
 	KRW    CalendarID = "KRW"
 )
 
+// buildHolidayMap creates a holiday lookup map from a list of date strings.
+// This is a shared factory function to eliminate duplicate init code.
+func buildHolidayMap(holidays []string) map[string]struct{} {
+	m := make(map[string]struct{}, len(holidays))
+	for _, h := range holidays {
+		m[h] = struct{}{}
+	}
+	return m
+}
+
+// Holiday maps are initialized using buildHolidayMap.
+// Each calendar file (japan.go, target.go, korea.go) defines its holiday list.
 var targetHolidays = map[string]struct{}{}
 var jpnHolidays = map[string]struct{}{}
 var usdHolidays = map[string]struct{}{}
-var krwHolidays = map[string]struct{}{}
-
-func init() {
-	// Initialize KRW holidays from Korea Exchange data
-	krwHolidays = make(map[string]struct{}, len(koreaHolidayList))
-	for _, h := range koreaHolidayList {
-		krwHolidays[h] = struct{}{}
-	}
-}
+var krwHolidays = buildHolidayMap(koreaHolidayList)
 
 func isHoliday(cal CalendarID, t time.Time) bool {
 	key := t.Format("2006-01-02")

@@ -1,4 +1,4 @@
-name: Release parswapspread (main)
+name: Release parswapspread
 
 on:
   push:
@@ -29,27 +29,35 @@ jobs:
           go build -trimpath -ldflags="-s -w" -o dist/parswapspread-linux-amd64 ./cmd/parswapspread
           ./dist/parswapspread-linux-amd64 -h
 
-      - name: Create/update moving tag
+      - name: Get next version
+        id: version
         run: |
           set -euo pipefail
-          git tag -f parswapspread-main "${GITHUB_SHA}"
-          git push -f origin parswapspread-main
+          # Get the latest v1.0.x tag
+          LATEST_TAG=$(git tag -l 'v1.0.*' --sort=-v:refname | head -n1)
+          if [ -z "$LATEST_TAG" ]; then
+            NEXT_VERSION="v1.0.0"
+          else
+            # Extract patch number and increment
+            PATCH=$(echo "$LATEST_TAG" | sed 's/v1\.0\.//')
+            NEXT_PATCH=$((PATCH + 1))
+            NEXT_VERSION="v1.0.${NEXT_PATCH}"
+          fi
+          echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Next version: $NEXT_VERSION"
 
-      - name: Create/update GitHub Release and upload asset
+      - name: Create tag
+        run: |
+          set -euo pipefail
+          git tag "${{ steps.version.outputs.version }}" "${GITHUB_SHA}"
+          git push origin "${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-
-          if ! gh release view parswapspread-main >/dev/null 2>&1; then
-            gh release create parswapspread-main \
-              --title "parswapspread (main)" \
-              --notes "Automated build from main: ${GITHUB_SHA}" \
-              --prerelease
-          else
-            gh release edit parswapspread-main \
-              --title "parswapspread (main)" \
-              --notes "Automated build from main: ${GITHUB_SHA}"
-          fi
-
-          gh release upload parswapspread-main dist/parswapspread-linux-amd64 --clobber
+          gh release create "${{ steps.version.outputs.version }}" \
+            --title "parswapspread ${{ steps.version.outputs.version }}" \
+            --notes "Release ${{ steps.version.outputs.version }} from commit ${GITHUB_SHA}" \
+            dist/parswapspread-linux-amd64

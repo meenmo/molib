@@ -303,9 +303,10 @@ var targetHolidayList = []string{
 	"2060-04-19",
 }
 
+func initTargetHolidays() {
+	targetHolidays = buildHolidayMap(targetHolidayList)
+}
+
 func init() {
-	targetHolidays = make(map[string]struct{}, len(targetHolidayList))
-	for _, h := range targetHolidayList {
-		targetHolidays[h] = struct{}{}
-	}
+	initTargetHolidays()
 }
