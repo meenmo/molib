@@ -1,21 +1,21 @@
 package market
 
-// ReferenceRate enumerates supported floating benchmarks.
-type ReferenceRate string
+// ReferenceIndex enumerates supported floating benchmarks.
+type ReferenceIndex string
 
 const (
-	ESTR      ReferenceRate = "ESTR"
-	EURIBOR3M ReferenceRate = "EURIBOR3M"
-	EURIBOR6M ReferenceRate = "EURIBOR6M"
-	TONAR     ReferenceRate = "TONAR"
-	TIBOR3M   ReferenceRate = "TIBOR3M"
-	TIBOR6M   ReferenceRate = "TIBOR6M"
-	SOFR      ReferenceRate = "SOFR"
-	CD91      ReferenceRate = "CD91"
+	ESTR      ReferenceIndex = "ESTR"
+	EURIBOR3M ReferenceIndex = "EURIBOR3M"
+	EURIBOR6M ReferenceIndex = "EURIBOR6M"
+	TONAR     ReferenceIndex = "TONAR"
+	TIBOR3M   ReferenceIndex = "TIBOR3M"
+	TIBOR6M   ReferenceIndex = "TIBOR6M"
+	SOFR      ReferenceIndex = "SOFR"
+	CD91D     ReferenceIndex = "CD91D"
 )
 
 // IsOvernight reports whether the reference rate is an overnight index used in OIS discounting/projection.
-func IsOvernight(r ReferenceRate) bool {
+func IsOvernight(r ReferenceIndex) bool {
 	switch r {
 	case ESTR, TONAR, SOFR:
 		return true

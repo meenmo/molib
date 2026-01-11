@@ -1,0 +1,157 @@
+{
+  "curve_date": "2025-12-15",
+  "curve_type": "IRS",
+  "floating_swap_leg": "EURIBOR6MFloating",
+  "curve_fixed_leg_day_count": "30/360",
+  "curve_settlement_lag_days": 2,
+  "curve_quotes": [
+    { "tenor": "6M", "rate": 2.17 },
+    { "tenor": "1Y", "rate": 2.207 },
+    { "tenor": "15M", "rate": 2.191 },
+    { "tenor": "18M", "rate": 2.236 },
+    { "tenor": "21M", "rate": 2.251 },
+    { "tenor": "2Y", "rate": 2.2935 },
+    { "tenor": "3Y", "rate": 2.40755 },
+    { "tenor": "4Y", "rate": 2.505 },
+    { "tenor": "5Y", "rate": 2.588 },
+    { "tenor": "6Y", "rate": 2.6651 },
+    { "tenor": "7Y", "rate": 2.737 },
+    { "tenor": "8Y", "rate": 2.80455 },
+    { "tenor": "9Y", "rate": 2.86605 },
+    { "tenor": "10Y", "rate": 2.9226 },
+    { "tenor": "11Y", "rate": 2.974 },
+    { "tenor": "12Y", "rate": 3.019 },
+    { "tenor": "13Y", "rate": 3.063 },
+    { "tenor": "14Y", "rate": 3.099 },
+    { "tenor": "15Y", "rate": 3.131 },
+    { "tenor": "16Y", "rate": 3.1575 },
+    { "tenor": "17Y", "rate": 3.1777 },
+    { "tenor": "18Y", "rate": 3.194 },
+    { "tenor": "19Y", "rate": 3.208 },
+    { "tenor": "20Y", "rate": 3.217 },
+    { "tenor": "21Y", "rate": 3.223 },
+    { "tenor": "22Y", "rate": 3.228 },
+    { "tenor": "23Y", "rate": 3.232 },
+    { "tenor": "24Y", "rate": 3.233 },
+    { "tenor": "25Y", "rate": 3.234 },
+    { "tenor": "26Y", "rate": 3.233 },
+    { "tenor": "27Y", "rate": 3.233 },
+    { "tenor": "28Y", "rate": 3.232 },
+    { "tenor": "29Y", "rate": 3.231 },
+    { "tenor": "30Y", "rate": 3.229 },
+    { "tenor": "35Y", "rate": 3.216 },
+    { "tenor": "40Y", "rate": 3.19175 },
+    { "tenor": "45Y", "rate": 3.15975 },
+    { "tenor": "50Y", "rate": 3.12775 },
+    { "tenor": "60Y", "rate": 3.068 }
+  ],
+  "bonds": [
+    {
+      "isin": "DE0001102523",
+      "notional": 10000.0,
+      "px_dirty_mid": 96.1,
+      "expected_asw_bp": -17.036484,
+      "cashflows": [
+        { "date": "2026-11-15", "coupon": 0, "principal": 0 },
+        { "date": "2027-11-15", "coupon": 0, "principal": 1000000 }
+      ]
+    },
+    {
+      "isin": "DE0001102440",
+      "notional": 10000.0,
+      "px_dirty_mid": 97.022,
+      "expected_asw_bp": -18.96954,
+      "cashflows": [
+        { "date": "2026-02-15", "coupon": 5000, "principal": 0 },
+        { "date": "2027-02-15", "coupon": 5000, "principal": 0 },
+        { "date": "2028-02-15", "coupon": 5000, "principal": 1000000 }
+      ]
+    },
+    {
+      "isin": "DE000BU25000",
+      "notional": 10000.0,
+      "px_dirty_mid": 101.585,
+      "expected_asw_bp": -18.159022,
+      "cashflows": [
+        { "date": "2026-04-13", "coupon": 22000, "principal": 0 },
+        { "date": "2027-04-13", "coupon": 22000, "principal": 0 },
+        { "date": "2028-04-13", "coupon": 22000, "principal": 1000000 }
+      ]
+    },
+    {
+      "isin": "DE0001102556",
+      "notional": 10000.0,
+      "px_dirty_mid": 93.841,
+      "expected_asw_bp": -18.49081,
+      "cashflows": [
+        { "date": "2026-11-15", "coupon": 0, "principal": 0 },
+        { "date": "2027-11-15", "coupon": 0, "principal": 0 },
+        { "date": "2028-11-15", "coupon": 0, "principal": 1000000 }
+      ]
+    },
+    {
+      "isin": "DE0001102465",
+      "notional": 10000.0,
+      "px_dirty_mid": 94.177,
+      "expected_asw_bp": -17.383308,
+      "cashflows": [
+        { "date": "2026-02-15", "coupon": 2500, "principal": 0 },
+        { "date": "2027-02-15", "coupon": 2500, "principal": 0 },
+        { "date": "2028-02-15", "coupon": 2500, "principal": 0 },
+        { "date": "2029-02-15", "coupon": 2500, "principal": 1000000 }
+      ]
+    },
+    {
+      "isin": "FR0013451507",
+      "notional": 10000.0,
+      "px_dirty_mid": 90.177,
+      "expected_asw_bp": 13.935846,
+      "cashflows": [
+        { "date": "2026-11-25", "coupon": 0, "principal": 0 },
+        { "date": "2027-11-25", "coupon": 0, "principal": 0 },
+        { "date": "2028-11-25", "coupon": 0, "principal": 0 },
+        { "date": "2029-11-25", "coupon": 0, "principal": 1000000 }
+      ]
+    },
+    {
+      "isin": "DE0001135143",
+      "notional": 10000.0,
+      "px_dirty_mid": 120.806,
+      "expected_asw_bp": -15.439744,
+      "cashflows": [
+        { "date": "2026-01-04", "coupon": 62500, "principal": 0 },
+        { "date": "2027-01-04", "coupon": 62500, "principal": 0 },
+        { "date": "2028-01-04", "coupon": 62500, "principal": 0 },
+        { "date": "2029-01-04", "coupon": 62500, "principal": 0 },
+        { "date": "2030-01-04", "coupon": 62500, "principal": 1000000 }
+      ]
+    },
+    {
+      "isin": "FR001400PM68",
+      "notional": 10000.0,
+      "px_dirty_mid": 102.331,
+      "expected_asw_bp": 19.315755,
+      "cashflows": [
+        { "date": "2026-02-25", "coupon": 27500, "principal": 0 },
+        { "date": "2027-02-25", "coupon": 27500, "principal": 0 },
+        { "date": "2028-02-25", "coupon": 27500, "principal": 0 },
+        { "date": "2029-02-25", "coupon": 27500, "principal": 0 },
+        { "date": "2030-02-25", "coupon": 27500, "principal": 1000000 }
+      ]
+    },
+    {
+      "isin": "FR0011883966",
+      "notional": 10000.0,
+      "px_dirty_mid": 100.422,
+      "expected_asw_bp": 18.611489,
+      "cashflows": [
+        { "date": "2026-05-25", "coupon": 25000, "principal": 0 },
+        { "date": "2027-05-25", "coupon": 25000, "principal": 0 },
+        { "date": "2028-05-25", "coupon": 25000, "principal": 0 },
+        { "date": "2029-05-25", "coupon": 25000, "principal": 0 },
+        { "date": "2030-05-25", "coupon": 25000, "principal": 1000000 }
+      ]
+    }
+  ]
+}
+

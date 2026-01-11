@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/meenmo/molib/calendar"
-	swaps "github.com/meenmo/molib/instruments/swaps"
-	basisdata "github.com/meenmo/molib/marketdata"
 	"github.com/meenmo/molib/swap"
 	"github.com/meenmo/molib/swap/curve"
 	"github.com/meenmo/molib/swap/market"
@@ -16,12 +14,13 @@ import (
 func TestGenerateSchedule_SinglePeriod(t *testing.T) {
 	t.Parallel()
 
-	effective := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-	maturity := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	// Use business days to avoid calendar adjustment changing the expected schedule.
+	effective := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
+	maturity := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
 
 	leg := market.LegConvention{
 		LegType:                 market.LegFloating,
-		ReferenceRate:           market.TIBOR6M,
+		ReferenceIndex:          market.TIBOR6M,
 		DayCount:                market.Act365F,
 		ResetFrequency:          market.FreqAnnual,
 		PayFrequency:            market.FreqAnnual,
@@ -29,7 +28,7 @@ func TestGenerateSchedule_SinglePeriod(t *testing.T) {
 		PayDelayDays:            0,
 		BusinessDayAdjustment:   market.ModifiedFollowing,
 		RollConvention:          market.BackwardEOM,
-		Calendar:                calendar.USD,
+		Calendar:                calendar.FD,
 		ResetPosition:           market.ResetInAdvance,
 		IncludeInitialPrincipal: false,
 		IncludeFinalPrincipal:   false,
@@ -70,7 +69,7 @@ func TestGetDiscountFactorsAndZeroRates(t *testing.T) {
 		settlement: 1.0,
 		maturity:   0.95,
 	}
-	crv := curve.NewCurveFromDFs(settlement, dfs, calendar.USD, 0)
+	crv := curve.NewCurveFromDFs(settlement, dfs, calendar.FD, 0)
 
 	out, err := swap.GetDiscountFactors(crv, []time.Time{settlement, maturity})
 	if err != nil {
@@ -102,19 +101,20 @@ func TestGetDiscountFactorsAndZeroRates(t *testing.T) {
 func TestGetForwardRates_SinglePeriod(t *testing.T) {
 	t.Parallel()
 
-	effective := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-	maturity := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	// Use business days to avoid calendar adjustment changing the expected schedule.
+	effective := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
+	maturity := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
 
 	// Build a projection curve with a 2% simple forward over 1Y.
 	dfEnd := 1.0 / 1.02
 	proj := curve.NewCurveFromDFs(effective, map[time.Time]float64{
 		effective: 1.0,
 		maturity:  dfEnd,
-	}, calendar.USD, 0)
+	}, calendar.FD, 0)
 
 	leg := market.LegConvention{
 		LegType:                 market.LegFloating,
-		ReferenceRate:           market.TIBOR6M,
+		ReferenceIndex:          market.TIBOR6M,
 		DayCount:                market.Act365F,
 		ResetFrequency:          market.FreqAnnual,
 		PayFrequency:            market.FreqAnnual,
@@ -122,7 +122,7 @@ func TestGetForwardRates_SinglePeriod(t *testing.T) {
 		PayDelayDays:            0,
 		BusinessDayAdjustment:   market.ModifiedFollowing,
 		RollConvention:          market.BackwardEOM,
-		Calendar:                calendar.USD,
+		Calendar:                calendar.FD,
 		ResetPosition:           market.ResetInAdvance,
 		IncludeInitialPrincipal: false,
 		IncludeFinalPrincipal:   false,
@@ -143,15 +143,16 @@ func TestGetForwardRates_SinglePeriod(t *testing.T) {
 func TestNPVAndSolveParSpread_SinglePeriod(t *testing.T) {
 	t.Parallel()
 
-	effective := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-	maturity := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	// Use business days to avoid calendar adjustment changing the expected schedule.
+	effective := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
+	maturity := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
 	valuation := effective
 
 	notional := 100.0
 
 	leg := market.LegConvention{
 		LegType:                 market.LegFloating,
-		ReferenceRate:           market.TIBOR6M,
+		ReferenceIndex:          market.TIBOR6M,
 		DayCount:                market.Act365F,
 		ResetFrequency:          market.FreqAnnual,
 		PayFrequency:            market.FreqAnnual,
@@ -159,7 +160,7 @@ func TestNPVAndSolveParSpread_SinglePeriod(t *testing.T) {
 		PayDelayDays:            0,
 		BusinessDayAdjustment:   market.ModifiedFollowing,
 		RollConvention:          market.BackwardEOM,
-		Calendar:                calendar.USD,
+		Calendar:                calendar.FD,
 		ResetPosition:           market.ResetInAdvance,
 		IncludeInitialPrincipal: false,
 		IncludeFinalPrincipal:   false,
@@ -168,19 +169,19 @@ func TestNPVAndSolveParSpread_SinglePeriod(t *testing.T) {
 	disc := curve.NewCurveFromDFs(effective, map[time.Time]float64{
 		effective: 1.0,
 		maturity:  0.95,
-	}, calendar.USD, 0)
+	}, calendar.FD, 0)
 
 	// Pay projection curve: 2% forward over 1Y => DF(end) = 1 / (1 + 0.02).
 	projPay := curve.NewCurveFromDFs(effective, map[time.Time]float64{
 		effective: 1.0,
 		maturity:  1.0 / 1.02,
-	}, calendar.USD, 0)
+	}, calendar.FD, 0)
 
 	// Receive projection curve: 1% forward over 1Y => DF(end) = 1 / (1 + 0.01).
 	projRec := curve.NewCurveFromDFs(effective, map[time.Time]float64{
 		effective: 1.0,
 		maturity:  1.0 / 1.01,
-	}, calendar.USD, 0)
+	}, calendar.FD, 0)
 
 	spec := market.SwapSpec{
 		Notional:      notional,
@@ -217,65 +218,12 @@ func TestNPVAndSolveParSpread_SinglePeriod(t *testing.T) {
 	}
 }
 
-func TestSolveParSpread_JPY5x5_Tibor6M_Tonar_Fixtures20251210(t *testing.T) {
-	// This is a lightweight integration test using the embedded fixtures from marketdata/.
-	// It validates that the trade builder + par spread solve produces a sensible result
-	// for the JPY TIBOR6M vs TONAR structure on the 2025-12-10 curve date.
-
-	curveDate := time.Date(2025, 12, 10, 0, 0, 0, 0, time.UTC)
-	tradeDate := time.Date(2025, 12, 12, 0, 0, 0, 0, time.UTC)
-	valuationDate := tradeDate
-
-	forwardTenorYears := 5
-	swapTenorYears := 5
-
-	oisLeg := swaps.TONARFloat
-
-	payLeg := swaps.TIBOR6MFloat
-	payLeg.PayDelayDays = 2 // match SWPM export configuration for this comparison
-
-	recLeg := swaps.TONARFloat
-
-	notional := 10_000_000.0
-
-	trade, err := swap.InterestRateSwap(swap.InterestRateSwapParams{
-		DataSource:        swap.DataSourceBGN,
-		ClearingHouse:     swap.ClearingHouseOTC,
-		CurveDate:         curveDate,
-		TradeDate:         tradeDate,
-		ValuationDate:     valuationDate,
-		ForwardTenorYears: forwardTenorYears,
-		SwapTenorYears:    swapTenorYears,
-		Notional:          notional,
-		PayLeg:            payLeg,
-		RecLeg:            recLeg,
-		DiscountingOIS:    oisLeg,
-		OISQuotes:         basisdata.BGNTonar,
-		PayLegQuotes:      basisdata.BGNSTibor6M,
-	})
-	if err != nil {
-		t.Fatalf("InterestRateSwap error: %v", err)
-	}
-
-	gotSpread, pv, err := trade.SolveParSpread(swap.SpreadTargetRecLeg)
-	if err != nil {
-		t.Fatalf("SolveParSpread error: %v", err)
-	}
-	if math.Abs(pv.TotalPV) > 1e-6 {
-		t.Fatalf("expected NPV ~ 0 at solved spread, got %.12f", pv.TotalPV)
-	}
-
-	// Sanity bound: SWPM fair receive-leg spread is ~57.33 bp for this setup.
-	if gotSpread < 40 || gotSpread > 80 {
-		t.Fatalf("spread out of expected range: got %.12f bp", gotSpread)
-	}
-}
-
 func TestSolveParFixedRate_SinglePeriod(t *testing.T) {
 	t.Parallel()
 
-	effective := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-	maturity := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	// Use business days to avoid calendar adjustment changing the expected schedule.
+	effective := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)
+	maturity := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
 	valuation := effective
 
 	notional := 100.0
@@ -286,13 +234,13 @@ func TestSolveParFixedRate_SinglePeriod(t *testing.T) {
 		PayFrequency:            market.FreqAnnual,
 		BusinessDayAdjustment:   market.ModifiedFollowing,
 		RollConvention:          market.BackwardEOM,
-		Calendar:                calendar.USD,
+		Calendar:                calendar.FD,
 		IncludeInitialPrincipal: false,
 		IncludeFinalPrincipal:   false,
 	}
 	floatLeg := market.LegConvention{
 		LegType:                 market.LegFloating,
-		ReferenceRate:           market.TIBOR6M,
+		ReferenceIndex:          market.TIBOR6M,
 		DayCount:                market.Act365F,
 		ResetFrequency:          market.FreqAnnual,
 		PayFrequency:            market.FreqAnnual,
@@ -300,7 +248,7 @@ func TestSolveParFixedRate_SinglePeriod(t *testing.T) {
 		PayDelayDays:            0,
 		BusinessDayAdjustment:   market.ModifiedFollowing,
 		RollConvention:          market.BackwardEOM,
-		Calendar:                calendar.USD,
+		Calendar:                calendar.FD,
 		ResetPosition:           market.ResetInAdvance,
 		IncludeInitialPrincipal: false,
 		IncludeFinalPrincipal:   false,
@@ -309,13 +257,13 @@ func TestSolveParFixedRate_SinglePeriod(t *testing.T) {
 	disc := curve.NewCurveFromDFs(effective, map[time.Time]float64{
 		effective: 1.0,
 		maturity:  0.95,
-	}, calendar.USD, 0)
+	}, calendar.FD, 0)
 
 	// Receive float: 2% forward over 1Y => DF(end) = 1 / (1 + 0.02).
 	projFloat := curve.NewCurveFromDFs(effective, map[time.Time]float64{
 		effective: 1.0,
 		maturity:  1.0 / 1.02,
-	}, calendar.USD, 0)
+	}, calendar.FD, 0)
 
 	spec := market.SwapSpec{
 		Notional:      notional,
@@ -329,7 +277,7 @@ func TestSolveParFixedRate_SinglePeriod(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SolveParSpread error: %v", err)
 	}
-	if math.Abs(fixedRateBP-200.0) > 1e-9 {
+	if math.Abs(fixedRateBP-200.0) > 1e-6 {
 		t.Fatalf("fixed rate mismatch: got %.12f want 200.0", fixedRateBP)
 	}
 

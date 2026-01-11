@@ -1,7 +1,7 @@
 package calendar
 
-// jpnHolidayList contains Japan holidays (weekdays only) from 2000-01-01 to 2060-12-31.
-var jpnHolidayList = []string{
+// jpHolidayList contains Japan holidays (weekdays only) from 2000-01-01 to 2060-12-31.
+var jpHolidayList = []string{
 	"2000-01-03",
 	"2000-01-10",
 	"2000-02-11",
@@ -996,10 +996,10 @@ var jpnHolidayList = []string{
 	"2060-12-31",
 }
 
-func initJpnHolidays() {
-	jpnHolidays = buildHolidayMap(jpnHolidayList)
+func initJpHolidays() {
+	jpHolidays = buildHolidayMap(jpHolidayList)
 }
 
 func init() {
-	initJpnHolidays()
+	initJpHolidays()
 }

@@ -85,19 +85,20 @@ func generateScheduleForward(effective, maturity time.Time, leg market.LegConven
 	start := effective
 	var prevAdjustedEnd time.Time // Track the previous period's adjusted end for chaining
 
-	for {
-		var next time.Time
+	for start.Before(maturity) {
+		// Generate unadjusted period end, then cap to maturity to create a final stub if needed.
+		var endUnadj time.Time
 		if leg.RollConvention == market.BackwardEOM {
-			next = utils.AddMonth(start, months)
+			endUnadj = utils.AddMonth(start, months)
 		} else {
-			next = start.AddDate(0, months, 0)
+			endUnadj = start.AddDate(0, months, 0)
 		}
-		if next.After(maturity.AddDate(0, 0, 1)) {
-			break
+		if endUnadj.After(maturity) {
+			endUnadj = maturity
 		}
 
 		// OIS swaps (overnight rates) use chained accrual periods per Bloomberg SWPM convention
-		isOIS := market.IsOvernight(leg.ReferenceRate)
+		isOIS := market.IsOvernight(leg.ReferenceIndex)
 
 		// For OIS, chain from previous period's end; for others, use independent periods
 		var accrualStart time.Time
@@ -106,26 +107,17 @@ func generateScheduleForward(effective, maturity time.Time, leg market.LegConven
 		} else {
 			accrualStart = calendar.Adjust(leg.Calendar, start)
 		}
-		accrualEnd := calendar.Adjust(leg.Calendar, next)
+		accrualEnd := calendar.Adjust(leg.Calendar, endUnadj)
+		paymentDate := calendar.AddBusinessDays(leg.Calendar, accrualEnd, leg.PayDelayDays)
 
-		// For OIS with PayDelayDays=0 (Bloomberg SWPM convention),
-		// the payment date IS the accrual end date
-		var paymentDate time.Time
-		if isOIS && leg.PayDelayDays == 0 {
-			paymentDate = accrualEnd
-			// No need to adjust accrualEnd, it's already the payment date
-		} else if isOIS {
-			// If there are payment delays, adjust the end date accordingly
-			paymentDate = calendar.AddBusinessDays(leg.Calendar, accrualEnd, leg.PayDelayDays)
-			accrualEnd = paymentDate // Use payment date as accrual end for OIS
-		} else {
-			// Standard convention (IBOR/Fixed): payment date is after accrual end
-			paymentDate = calendar.AddBusinessDays(leg.Calendar, accrualEnd, leg.PayDelayDays)
+		fixCal := leg.FixingCalendar
+		if fixCal == "" {
+			fixCal = leg.Calendar
 		}
 
-		fixingDate := calendar.AddBusinessDays(leg.Calendar, accrualStart, -leg.FixingLagDays)
+		fixingDate := calendar.AddBusinessDays(fixCal, accrualStart, -leg.FixingLagDays)
 		if leg.ResetPosition == market.ResetInArrears {
-			fixingDate = calendar.AddBusinessDays(leg.Calendar, accrualEnd, -(leg.RateCutoffDays + leg.FixingLagDays))
+			fixingDate = calendar.AddBusinessDays(fixCal, accrualEnd, -(leg.RateCutoffDays + leg.FixingLagDays))
 		}
 
 		periods = append(periods, SchedulePeriod{
@@ -141,8 +133,8 @@ func generateScheduleForward(effective, maturity time.Time, leg market.LegConven
 			prevAdjustedEnd = accrualEnd
 		}
 
-		// Always use the unadjusted date for the next iteration to avoid drift
-		start = next
+		// Always use the unadjusted date for the next iteration to avoid drift.
+		start = endUnadj
 	}
 
 	return periods, nil
@@ -193,9 +185,14 @@ func generateScheduleBackward(effective, maturity time.Time, leg market.LegConve
 
 		paymentDate := calendar.AddBusinessDays(leg.Calendar, accrualEnd, leg.PayDelayDays)
 
-		fixingDate := calendar.AddBusinessDays(leg.Calendar, accrualStart, -leg.FixingLagDays)
+		fixCal := leg.FixingCalendar
+		if fixCal == "" {
+			fixCal = leg.Calendar
+		}
+
+		fixingDate := calendar.AddBusinessDays(fixCal, accrualStart, -leg.FixingLagDays)
 		if leg.ResetPosition == market.ResetInArrears {
-			fixingDate = calendar.AddBusinessDays(leg.Calendar, accrualEnd, -(leg.RateCutoffDays + leg.FixingLagDays))
+			fixingDate = calendar.AddBusinessDays(fixCal, accrualEnd, -(leg.RateCutoffDays + leg.FixingLagDays))
 		}
 
 		periods = append(periods, SchedulePeriod{

@@ -34,7 +34,7 @@ func (crv Curve) generatePaymentDates() []time.Time {
 	dates := make([]time.Time, 0, 81)
 	for i := 0; i <= 80; i++ {
 		paymentDate := crv.settlementDate.AddDate(0, 3*i, 0)
-		dates = append(dates, calendar.Adjust(calendar.KRW, paymentDate))
+		dates = append(dates, calendar.Adjust(calendar.KR, paymentDate))
 	}
 	return dates
 }

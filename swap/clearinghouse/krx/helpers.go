@@ -14,7 +14,7 @@ func paymentDatesToTenors(dates []time.Time) map[time.Time]float64 {
 	termination := dates[len(dates)-1].AddDate(0, 0, 1)
 
 	for i := 0.0; paymentDate.Before(termination); i++ {
-		tenorMap[calendar.Adjust(calendar.KRW, paymentDate)] = i * 0.25
+		tenorMap[calendar.Adjust(calendar.KR, paymentDate)] = i * 0.25
 		paymentDate = paymentDate.AddDate(0, 3, 0)
 	}
 	return tenorMap
@@ -43,12 +43,12 @@ func adjacentQuotedDates(target time.Time, dates []time.Time, quotes ParSwapQuot
 func priorPaymentDate(settlementDate, effectiveDate time.Time) time.Time {
 	var candidate time.Time
 
-	for i := 0; calendar.Adjust(calendar.KRW, utils.AddMonth(effectiveDate, 3*i)).Before(settlementDate.AddDate(0, 0, 1)); i++ {
-		candidate = calendar.Adjust(calendar.KRW, utils.AddMonth(effectiveDate, 3*i))
+	for i := 0; calendar.Adjust(calendar.KR, utils.AddMonth(effectiveDate, 3*i)).Before(settlementDate.AddDate(0, 0, 1)); i++ {
+		candidate = calendar.Adjust(calendar.KR, utils.AddMonth(effectiveDate, 3*i))
 	}
 
-	if calendar.IsEndOfMonth(calendar.KRW, effectiveDate) {
-		return calendar.LastBusinessDayOfMonth(calendar.KRW, candidate)
+	if calendar.IsEndOfMonth(calendar.KR, effectiveDate) {
+		return calendar.LastBusinessDayOfMonth(calendar.KR, candidate)
 	}
 	return candidate
 }

@@ -165,7 +165,7 @@ func InterestRateSwap(params InterestRateSwapParams) (*SwapTrade, error) {
 	// Build discount curve: use IBOR conventions (30/360 for EUR) if discounting with IBOR rate,
 	// or OIS conventions (ACT/360 for EUR) if discounting with overnight rate.
 	var disc *curve.Curve
-	if market.IsOvernight(params.DiscountingOIS.ReferenceRate) {
+	if market.IsOvernight(params.DiscountingOIS.ReferenceIndex) {
 		disc = curve.BuildCurve(curveSettlement, params.OISQuotes, params.DiscountingOIS.Calendar, 1)
 	} else {
 		// IBOR discounting (pre-2020 convention): use 30/360 for EUR fixed leg
@@ -181,24 +181,24 @@ func InterestRateSwap(params InterestRateSwapParams) (*SwapTrade, error) {
 		}
 		// For all floating legs, quotes must be provided explicitly
 		if quotes == nil {
-			return nil, fmt.Errorf("missing quotes for %s projection curve", leg.ReferenceRate)
+			return nil, fmt.Errorf("missing quotes for %s projection curve", leg.ReferenceIndex)
 		}
 
 		// For overnight rates (OIS), build curve directly from quotes
-		if market.IsOvernight(leg.ReferenceRate) {
+		if market.IsOvernight(leg.ReferenceIndex) {
 			// Build OIS curve for this leg using provided quotes
 			// This enables OIS basis swaps (e.g., JSCC TONAR vs LCH TONAR)
 			oisCurve := curve.BuildCurve(curveSettlement, quotes, leg.Calendar, 1)
 			if oisCurve == nil {
-				return nil, fmt.Errorf("failed to build OIS projection curve for %s", leg.ReferenceRate)
+				return nil, fmt.Errorf("failed to build OIS projection curve for %s", leg.ReferenceIndex)
 			}
 			return oisCurve, nil
 		}
 
 		// For IBOR discounting (single-curve), if the leg index matches the discounting index,
 		// use the discount curve directly for projection (PV of the par float leg reduces to DF(start)-DF(end)).
-		if !market.IsOvernight(params.DiscountingOIS.ReferenceRate) &&
-			leg.ReferenceRate == params.DiscountingOIS.ReferenceRate {
+		if !market.IsOvernight(params.DiscountingOIS.ReferenceIndex) &&
+			leg.ReferenceIndex == params.DiscountingOIS.ReferenceIndex {
 			return disc, nil
 		}
 
@@ -227,9 +227,9 @@ func InterestRateSwap(params InterestRateSwapParams) (*SwapTrade, error) {
 	}
 
 	// Detect OIS basis swap: both legs are overnight rates with the same reference index
-	isOISBasisSwap := market.IsOvernight(params.PayLeg.ReferenceRate) &&
-		market.IsOvernight(params.RecLeg.ReferenceRate) &&
-		params.PayLeg.ReferenceRate == params.RecLeg.ReferenceRate
+	isOISBasisSwap := market.IsOvernight(params.PayLeg.ReferenceIndex) &&
+		market.IsOvernight(params.RecLeg.ReferenceIndex) &&
+		params.PayLeg.ReferenceIndex == params.RecLeg.ReferenceIndex
 
 	return &SwapTrade{
 		DataSource:     params.DataSource,

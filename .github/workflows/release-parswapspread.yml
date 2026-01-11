@@ -1,4 +1,4 @@
-name: Release parswapspread
+name: Release parswapspread & aswspread
 
 on:
   push:
@@ -22,12 +22,14 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Build parswapspread
+      - name: Build binaries
         run: |
           set -euo pipefail
           mkdir -p dist
           go build -trimpath -ldflags="-s -w" -o dist/parswapspread-linux-amd64 ./cmd/parswapspread
+          go build -trimpath -ldflags="-s -w" -o dist/aswspread-linux-amd64 ./cmd/aswspread
           ./dist/parswapspread-linux-amd64 -h
+          ./dist/aswspread-linux-amd64 -h
 
       - name: Get next version
         id: version
@@ -58,6 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           gh release create "${{ steps.version.outputs.version }}" \
-            --title "parswapspread ${{ steps.version.outputs.version }}" \
-            --notes "Release ${{ steps.version.outputs.version }} from commit ${GITHUB_SHA}" \
-            dist/parswapspread-linux-amd64
+            --title "molib tools ${{ steps.version.outputs.version }}" \
+            --notes "Release ${{ steps.version.outputs.version }} (parswapspread + aswspread) from commit ${GITHUB_SHA}" \
+            dist/parswapspread-linux-amd64 \
+            dist/aswspread-linux-amd64
