@@ -279,9 +279,20 @@ func (c *Curve) buildOISCoupons(maturity time.Time) []oisCoupon {
 	payDelay := 0
 	accrualDC := "ACT/365F" // Default
 
-	if c.cal == calendar.JPN {
+	if c.cal == calendar.JP {
 		payDelay = 2
 		accrualDC = "ACT/365F"
+	} else if c.cal == calendar.FD || c.cal == calendar.GT {
+		// USD money-market convention for SOFR OIS fixed legs:
+		// - ACT/360
+		// - payment lag T+2
+		if c.fixedLegDC == FixedLegDayCountIBOR {
+			// Legacy USD IBOR fixed legs commonly use 30/360.
+			accrualDC = "30/360"
+		} else {
+			accrualDC = "ACT/360"
+		}
+		payDelay = 2
 	} else if c.cal == calendar.TARGET {
 		// Use 30/360 for IBOR discounting, ACT/360 for OIS
 		if c.fixedLegDC == FixedLegDayCountIBOR {
@@ -289,7 +300,10 @@ func (c *Curve) buildOISCoupons(maturity time.Time) []oisCoupon {
 			// EUR IBOR IRS fixed legs pay on accrual end date (no payment lag).
 			payDelay = 0
 		} else {
-			accrualDC = "ACT/360"
+			// Bloomberg SWPM convention for EUR ESTR OIS fixed legs is 30/360
+			// (fixed coupons are computed on a 30/360 basis even though the curve
+			// represents an overnight index swap).
+			accrualDC = "30/360"
 			// EUR OIS fixed legs typically pay T+1 (ESTR convention).
 			payDelay = 1
 		}
@@ -646,7 +660,7 @@ func (c *Curve) evalIBORSwapNPV(quotedDates []time.Time, pseudoDF map[time.Time]
 	if c.cal == calendar.TARGET {
 		fixedDayCount = "30E/360"
 		fixedFreqMonths = 12
-	} else if c.cal == calendar.JPN {
+	} else if c.cal == calendar.JP {
 		fixedDayCount = "ACT/365F"
 		fixedFreqMonths = 6
 	}

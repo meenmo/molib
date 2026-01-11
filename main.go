@@ -37,7 +37,7 @@ func main() {
 		Notional:        10000000000,
 		Direction:       krx.PositionReceive,
 		SwapQuotes:      quotes,
-		ReferenceRate:   calendar.DefaultReferenceFeed(),
+		ReferenceIndex:  calendar.DefaultReferenceFeed(),
 	}
 
 	curve := krx.BootstrapCurve(trade.SettlementDate, trade.SwapQuotes)

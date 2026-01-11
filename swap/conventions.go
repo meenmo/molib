@@ -33,7 +33,7 @@ func GetDayCountConvention(cal calendar.CalendarID) DayCountConvention {
 			FixedFreqMonths: 12,
 		}
 
-	case calendar.JPN:
+	case calendar.JP:
 		// JPY conventions:
 		// - OIS (TONAR): ACT/365F
 		// - IBOR floating: ACT/365F
@@ -45,7 +45,7 @@ func GetDayCountConvention(cal calendar.CalendarID) DayCountConvention {
 			FixedFreqMonths: 6,
 		}
 
-	case calendar.KRW:
+	case calendar.KR:
 		// KRW conventions:
 		// - OIS: ACT/365F
 		// - IBOR (CD): ACT/365F

@@ -3,7 +3,7 @@ package calendar
 import "time"
 
 // koreaHolidayList contains KRW (Korea Exchange) holidays from 2009-2055.
-var koreaHolidayList = []string{
+var krHolidayList = []string{
 	"2009-01-01",
 	"2009-01-26",
 	"2009-01-27",
@@ -672,7 +672,6 @@ var koreaHolidayList = []string{
 	"2055-10-07",
 	"2055-10-11",
 }
-
 
 // CD91Fixings contains historical CD91 rate fixings.
 var CD91Fixings = map[string]float64{

@@ -30,10 +30,49 @@ type OISPreset struct {
 
 // Preset leg conventions for EUR and JPY.
 var (
-	ESTRFloat = market.LegConvention{
+	SOFRFixed = market.LegConvention{
+		LegType:               market.LegFixed,
+		DayCount:              market.Act360,
+		PayFrequency:          market.FreqAnnual,
+		FixingLagDays:         0,
+		PayDelayDays:          2,
+		BusinessDayAdjustment: market.ModifiedFollowing,
+		Calendar:              calendar.FD,
+	}
+
+	SOFRFloating = market.LegConvention{
 		LegType:                 market.LegFloating,
-		ReferenceRate:           market.ESTR,
-		DayCount:                market.Act365F,
+		ReferenceIndex:          market.SOFR,
+		DayCount:                market.Act360,
+		ResetFrequency:          market.FreqDaily,
+		PayFrequency:            market.FreqAnnual,
+		FixingLagDays:           0,
+		PayDelayDays:            2,
+		BusinessDayAdjustment:   market.ModifiedFollowing,
+		RollConvention:          market.Backward,
+		Calendar:                calendar.FD,
+		FixingCalendar:          calendar.GT,
+		ResetPosition:           market.ResetInArrears,
+		RateCutoffDays:          1,
+		IncludeInitialPrincipal: true,
+		IncludeFinalPrincipal:   true,
+	}
+
+	ESTRFixed = market.LegConvention{
+		LegType:               market.LegFixed,
+		DayCount:              market.Act360,
+		PayFrequency:          market.FreqAnnual,
+		FixingLagDays:         0,
+		PayDelayDays:          1,
+		BusinessDayAdjustment: market.ModifiedFollowing,
+		RollConvention:        market.BackwardEOM,
+		Calendar:              calendar.TARGET,
+	}
+
+	ESTRFloating = market.LegConvention{
+		LegType:                 market.LegFloating,
+		ReferenceIndex:          market.ESTR,
+		DayCount:                market.Act360,
 		ResetFrequency:          market.FreqDaily,
 		PayFrequency:            market.FreqAnnual,
 		FixingLagDays:           0,
@@ -47,9 +86,20 @@ var (
 		IncludeFinalPrincipal:   true,
 	}
 
-	EURIBOR3MFloat = market.LegConvention{
+	EURIBORFixed = market.LegConvention{
+		LegType:               market.LegFixed,
+		DayCount:              market.Act360,
+		PayFrequency:          market.FreqAnnual,
+		FixingLagDays:         0,
+		PayDelayDays:          0,
+		BusinessDayAdjustment: market.ModifiedFollowing,
+		RollConvention:        market.BackwardEOM,
+		Calendar:              calendar.TARGET,
+	}
+
+	EURIBOR3MFloating = market.LegConvention{
 		LegType:                 market.LegFloating,
-		ReferenceRate:           market.EURIBOR3M,
+		ReferenceIndex:          market.EURIBOR3M,
 		DayCount:                market.Act360,
 		ResetFrequency:          market.FreqQuarterly,
 		PayFrequency:            market.FreqQuarterly,
@@ -64,9 +114,9 @@ var (
 		ScheduleDirection:       market.ScheduleBackward,
 	}
 
-	EURIBOR6MFloat = market.LegConvention{
+	EURIBOR6MFloating = market.LegConvention{
 		LegType:                 market.LegFloating,
-		ReferenceRate:           market.EURIBOR6M,
+		ReferenceIndex:          market.EURIBOR6M,
 		DayCount:                market.Act360,
 		ResetFrequency:          market.FreqSemi,
 		PayFrequency:            market.FreqSemi,
@@ -81,9 +131,20 @@ var (
 		ScheduleDirection:       market.ScheduleBackward,
 	}
 
-	TONARFloat = market.LegConvention{
+	TONARFixed = market.LegConvention{
+		LegType:               market.LegFixed,
+		DayCount:              market.Act365F,
+		PayFrequency:          market.FreqAnnual,
+		FixingLagDays:         0,
+		PayDelayDays:          2,
+		BusinessDayAdjustment: market.ModifiedFollowing,
+		RollConvention:        market.BackwardEOM,
+		Calendar:              calendar.JP,
+	}
+
+	TONARFloating = market.LegConvention{
 		LegType:                 market.LegFloating,
-		ReferenceRate:           market.TONAR,
+		ReferenceIndex:          market.TONAR,
 		DayCount:                market.Act365F,
 		ResetFrequency:          market.FreqDaily,
 		PayFrequency:            market.FreqAnnual,
@@ -91,75 +152,14 @@ var (
 		PayDelayDays:            0,
 		BusinessDayAdjustment:   market.ModifiedFollowing,
 		RollConvention:          market.BackwardEOM,
-		Calendar:                calendar.JPN,
+		Calendar:                calendar.JP,
 		ResetPosition:           market.ResetInArrears,
 		RateCutoffDays:          1,
 		IncludeInitialPrincipal: true,
 		IncludeFinalPrincipal:   true,
 	}
 
-	TIBOR3MFloat = market.LegConvention{
-		LegType:                 market.LegFloating,
-		ReferenceRate:           market.TIBOR3M,
-		DayCount:                market.Act365F,
-		ResetFrequency:          market.FreqQuarterly,
-		PayFrequency:            market.FreqQuarterly,
-		FixingLagDays:           2,
-		PayDelayDays:            2,
-		BusinessDayAdjustment:   market.ModifiedFollowing,
-		RollConvention:          market.BackwardEOM,
-		Calendar:                calendar.JPN,
-		ResetPosition:           market.ResetInAdvance,
-		IncludeInitialPrincipal: true,
-		IncludeFinalPrincipal:   true,
-	}
-
-	TIBOR6MFloat = market.LegConvention{
-		LegType:                 market.LegFloating,
-		ReferenceRate:           market.TIBOR6M,
-		DayCount:                market.Act365F,
-		ResetFrequency:          market.FreqSemi,
-		PayFrequency:            market.FreqSemi,
-		FixingLagDays:           2,
-		PayDelayDays:            2,
-		BusinessDayAdjustment:   market.ModifiedFollowing,
-		RollConvention:          market.BackwardEOM,
-		Calendar:                calendar.JPN,
-		ResetPosition:           market.ResetInAdvance,
-		IncludeInitialPrincipal: true,
-		IncludeFinalPrincipal:   true,
-	}
-
-	// EUR IRS fixed leg: annual payments, ACT/360, TARGET calendar.
-	// This mirrors ficclib's EUR_IRS_FIXED convention for OIS.
-	EurFixedAnnual = market.LegConvention{
-		LegType:               market.LegFixed,
-		DayCount:              market.Act360,
-		PayFrequency:          market.FreqAnnual,
-		FixingLagDays:         0,
-		PayDelayDays:          1,
-		BusinessDayAdjustment: market.ModifiedFollowing,
-		RollConvention:        market.BackwardEOM,
-		Calendar:              calendar.TARGET,
-	}
-
-	// EUR IBOR IRS fixed leg: annual payments, 30/360, TARGET calendar.
-	// Used for EURIBOR swaps (pre-2020 IBOR discounting) where fixed leg uses 30/360.
-	Euribor6MFixed = market.LegConvention{
-		LegType:               market.LegFixed,
-		DayCount:              market.Dc30360,
-		PayFrequency:          market.FreqAnnual,
-		FixingLagDays:         0,
-		PayDelayDays:          0,
-		BusinessDayAdjustment: market.ModifiedFollowing,
-		RollConvention:        market.BackwardEOM,
-		Calendar:              calendar.TARGET,
-		ScheduleDirection:     market.ScheduleBackward,
-	}
-
-	// JPY IRS fixed leg: semiannual payments, ACT/365F, JPN calendar.
-	// This is the natural fixed leg for plain JPY TIBOR IRS examples.
-	JpyFixedSemi = market.LegConvention{
+	TIBORFixed = market.LegConvention{
 		LegType:               market.LegFixed,
 		DayCount:              market.Act365F,
 		PayFrequency:          market.FreqSemi,
@@ -167,35 +167,65 @@ var (
 		PayDelayDays:          0,
 		BusinessDayAdjustment: market.ModifiedFollowing,
 		RollConvention:        market.BackwardEOM,
-		Calendar:              calendar.JPN,
+		Calendar:              calendar.JP,
 	}
 
-	// EUR OIS fixed leg: annual payments, ACT/360, TARGET calendar.
-	// Mirrors ficclib's ESTR_FIXED convention.
-	EstrFixedAnnual = market.LegConvention{
-		LegType:               market.LegFixed,
-		ReferenceRate:         market.ESTR,
-		DayCount:              market.Act360,
-		PayFrequency:          market.FreqAnnual,
-		FixingLagDays:         0,
-		PayDelayDays:          1,
-		BusinessDayAdjustment: market.ModifiedFollowing,
-		RollConvention:        market.BackwardEOM,
-		Calendar:              calendar.TARGET,
+	TIBOR3MFloating = market.LegConvention{
+		LegType:                 market.LegFloating,
+		ReferenceIndex:          market.TIBOR3M,
+		DayCount:                market.Act365F,
+		ResetFrequency:          market.FreqQuarterly,
+		PayFrequency:            market.FreqQuarterly,
+		FixingLagDays:           2,
+		PayDelayDays:            2,
+		BusinessDayAdjustment:   market.ModifiedFollowing,
+		RollConvention:          market.BackwardEOM,
+		Calendar:                calendar.JP,
+		ResetPosition:           market.ResetInAdvance,
+		IncludeInitialPrincipal: true,
+		IncludeFinalPrincipal:   true,
 	}
 
-	// JPY OIS fixed leg: annual payments, ACT/365F, JPN calendar.
-	// Mirrors ficclib's TONAR_FIXED convention.
-	TonarFixedAnnual = market.LegConvention{
+	TIBOR6MFloating = market.LegConvention{
+		LegType:                 market.LegFloating,
+		ReferenceIndex:          market.TIBOR6M,
+		DayCount:                market.Act365F,
+		ResetFrequency:          market.FreqSemi,
+		PayFrequency:            market.FreqSemi,
+		FixingLagDays:           2,
+		PayDelayDays:            2,
+		BusinessDayAdjustment:   market.ModifiedFollowing,
+		RollConvention:          market.BackwardEOM,
+		Calendar:                calendar.JP,
+		ResetPosition:           market.ResetInAdvance,
+		IncludeInitialPrincipal: true,
+		IncludeFinalPrincipal:   true,
+	}
+
+	KRXCD91DFixed = market.LegConvention{
 		LegType:               market.LegFixed,
-		ReferenceRate:         market.TONAR,
 		DayCount:              market.Act365F,
-		PayFrequency:          market.FreqAnnual,
+		PayFrequency:          market.FreqQuarterly,
 		FixingLagDays:         0,
-		PayDelayDays:          2,
+		PayDelayDays:          0,
 		BusinessDayAdjustment: market.ModifiedFollowing,
-		RollConvention:        market.BackwardEOM,
-		Calendar:              calendar.JPN,
+		Calendar:              calendar.KR,
+	}
+
+	KRXCD91DFloating = market.LegConvention{
+		LegType:                 market.LegFloating,
+		ReferenceIndex:          market.CD91D,
+		DayCount:                market.Act365F,
+		ResetFrequency:          market.FreqQuarterly,
+		PayFrequency:            market.FreqQuarterly,
+		FixingLagDays:           0,
+		PayDelayDays:            0,
+		BusinessDayAdjustment:   market.ModifiedFollowing,
+		RollConvention:          market.BackwardEOM,
+		Calendar:                calendar.KR,
+		ResetPosition:           market.ResetInAdvance,
+		IncludeInitialPrincipal: true,
+		IncludeFinalPrincipal:   true,
 	}
 )
 
@@ -204,58 +234,58 @@ var (
 	// EUR IRS-style basis: pay EURIBOR 6M, receive EURIBOR 3M, discount on ESTR OIS.
 	// Naming omits redundant currency prefixes: the EUR nature is clear
 	// from the EURIBOR / ESTR indices themselves.
-	BasisEuribor3M6MEstr = BasisPreset{
-		PayLeg:      EURIBOR6MFloat,
-		RecLeg:      EURIBOR3MFloat,
-		DiscountOIS: ESTRFloat,
+	BasisEURIBOR3M6MESTR = BasisPreset{
+		PayLeg:      EURIBOR6MFloating,
+		RecLeg:      EURIBOR3MFloating,
+		DiscountOIS: ESTRFloating,
 	}
 
 	// JPY basis: pay TIBOR 6M, receive TIBOR 3M, discount on TONAR OIS.
 	// Likewise, the currency is implied by the TIBOR / TONAR indices,
 	// so the name focuses only on the indices.
-	BasisTibor3M6MTonar = BasisPreset{
-		PayLeg:      TIBOR6MFloat,
-		RecLeg:      TIBOR3MFloat,
-		DiscountOIS: TONARFloat,
+	BasisTIBOR3M6MTONAR = BasisPreset{
+		PayLeg:      TIBOR6MFloating,
+		RecLeg:      TIBOR3MFloating,
+		DiscountOIS: TONARFloating,
 	}
 
 	// EUR IRS: fixed vs EURIBOR 3M, discounted on ESTR OIS.
-	IrsEuribor3MEstr = IRSPreset{
-		FixedLeg:    EurFixedAnnual,
-		FloatLeg:    EURIBOR3MFloat,
-		DiscountOIS: ESTRFloat,
+	IRSEURIBOR3MESTR = IRSPreset{
+		FixedLeg:    EURIBORFixed,
+		FloatLeg:    EURIBOR3MFloating,
+		DiscountOIS: ESTRFloating,
 	}
 
 	// EUR IRS: fixed vs EURIBOR 6M, discounted on ESTR OIS.
-	IrsEuribor6MEstr = IRSPreset{
-		FixedLeg:    EurFixedAnnual,
-		FloatLeg:    EURIBOR6MFloat,
-		DiscountOIS: ESTRFloat,
+	IRSEURIBOR6MESTR = IRSPreset{
+		FixedLeg:    EURIBORFixed,
+		FloatLeg:    EURIBOR6MFloating,
+		DiscountOIS: ESTRFloating,
 	}
 
 	// JPY IRS: fixed vs TIBOR 3M, discounted on TONAR OIS.
-	IrsTibor3MTonar = IRSPreset{
-		FixedLeg:    JpyFixedSemi,
-		FloatLeg:    TIBOR3MFloat,
-		DiscountOIS: TONARFloat,
+	IRSTIBOR3MTONAR = IRSPreset{
+		FixedLeg:    TIBORFixed,
+		FloatLeg:    TIBOR3MFloating,
+		DiscountOIS: TONARFloating,
 	}
 
 	// JPY IRS: fixed vs TIBOR 6M, discounted on TONAR OIS.
-	IrsTibor6MTonar = IRSPreset{
-		FixedLeg:    JpyFixedSemi,
-		FloatLeg:    TIBOR6MFloat,
-		DiscountOIS: TONARFloat,
+	IRSTIBOR6MTONAR = IRSPreset{
+		FixedLeg:    TIBORFixed,
+		FloatLeg:    TIBOR6MFloating,
+		DiscountOIS: TONARFloating,
 	}
 
 	// EUR OIS: fixed vs ESTR.
-	OisEstr = OISPreset{
-		FixedLeg: EstrFixedAnnual,
-		FloatLeg: ESTRFloat,
+	OISESTR = OISPreset{
+		FixedLeg: ESTRFixed,
+		FloatLeg: ESTRFloating,
 	}
 
 	// JPY OIS: fixed vs TONAR.
-	OisTonar = OISPreset{
-		FixedLeg: TonarFixedAnnual,
-		FloatLeg: TONARFloat,
+	OISTONAR = OISPreset{
+		FixedLeg: TONARFixed,
+		FloatLeg: TONARFloating,
 	}
 )

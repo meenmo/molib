@@ -13,14 +13,14 @@ import (
 // For overnight indices (e.g., TONAR/ESTR/SOFR), the discount curve is also the projection curve.
 // For IBOR indices, it builds a dual curve bootstrapped using OIS discounting.
 func BuildProjectionCurve(curveDate time.Time, leg market.LegConvention, legQuotes map[string]float64, discount *Curve) *Curve {
-	if market.IsOvernight(leg.ReferenceRate) {
+	if market.IsOvernight(leg.ReferenceIndex) {
 		return discount
 	}
 	if discount == nil {
 		panic("BuildProjectionCurve: nil discount curve")
 	}
 	if legQuotes == nil {
-		panic(fmt.Sprintf("BuildProjectionCurve: nil quotes for %s", leg.ReferenceRate))
+		panic(fmt.Sprintf("BuildProjectionCurve: nil quotes for %s", leg.ReferenceIndex))
 	}
 	// Use the leg's pay frequency for the floating leg periods in bootstrap,
 	// but use monthly grid for pillar interpolation (matches OIS curve precision).

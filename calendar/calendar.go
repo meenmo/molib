@@ -7,9 +7,10 @@ type CalendarID string
 
 const (
 	TARGET CalendarID = "TARGET"
-	JPN    CalendarID = "JPN"
-	USD    CalendarID = "USD"
-	KRW    CalendarID = "KRW"
+	JP     CalendarID = "JPN"
+	FD     CalendarID = "FD" // Federal Reserve (Fedwire-style) calendar
+	GT     CalendarID = "GT" // US Government bond calendar
+	KR     CalendarID = "KOR"
 )
 
 // buildHolidayMap creates a holiday lookup map from a list of date strings.
@@ -25,9 +26,10 @@ func buildHolidayMap(holidays []string) map[string]struct{} {
 // Holiday maps are initialized using buildHolidayMap.
 // Each calendar file (japan.go, target.go, korea.go) defines its holiday list.
 var targetHolidays = map[string]struct{}{}
-var jpnHolidays = map[string]struct{}{}
-var usdHolidays = map[string]struct{}{}
-var krwHolidays = buildHolidayMap(koreaHolidayList)
+var jpHolidays = map[string]struct{}{}
+var fdHolidays = map[string]struct{}{}
+var gtHolidays = map[string]struct{}{}
+var krHolidays = buildHolidayMap(krHolidayList)
 
 func isHoliday(cal CalendarID, t time.Time) bool {
 	key := t.Format("2006-01-02")
@@ -35,14 +37,17 @@ func isHoliday(cal CalendarID, t time.Time) bool {
 	case TARGET:
 		_, ok := targetHolidays[key]
 		return ok
-	case JPN:
-		_, ok := jpnHolidays[key]
+	case JP:
+		_, ok := jpHolidays[key]
 		return ok
-	case USD:
-		_, ok := usdHolidays[key]
+	case FD:
+		_, ok := fdHolidays[key]
 		return ok
-	case KRW:
-		_, ok := krwHolidays[key]
+	case GT:
+		_, ok := gtHolidays[key]
+		return ok
+	case KR:
+		_, ok := krHolidays[key]
 		return ok
 	default:
 		return false

@@ -36,6 +36,7 @@ const (
 type RollConvention string
 
 const (
+	Backward    RollConvention = "BACKWARD"
 	BackwardEOM RollConvention = "BACKWARD_EOM"
 )
 
@@ -69,7 +70,7 @@ const (
 // LegConvention captures standard swap leg settings.
 type LegConvention struct {
 	LegType                 LegType
-	ReferenceRate           ReferenceRate
+	ReferenceIndex          ReferenceIndex
 	DayCount                DayCount
 	ResetFrequency          Frequency
 	PayFrequency            Frequency
@@ -78,6 +79,7 @@ type LegConvention struct {
 	BusinessDayAdjustment   BusinessDayAdjustment
 	RollConvention          RollConvention
 	Calendar                calendar.CalendarID
+	FixingCalendar          calendar.CalendarID
 	ResetPosition           ResetPosition
 	RateCutoffDays          int
 	IncludeInitialPrincipal bool

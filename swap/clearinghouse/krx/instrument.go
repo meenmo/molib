@@ -22,5 +22,5 @@ type InterestRateSwap struct {
 	Notional        float64
 	Direction       Position
 	SwapQuotes      ParSwapQuotes
-	ReferenceRate   calendar.ReferenceRateFeed
+	ReferenceIndex  calendar.ReferenceRateFeed
 }
