@@ -1,0 +1,26 @@
+{
+  "curve_date": "2025-12-15",
+  "trade_date": "2025-12-15",
+  "forward_tenor": 0,
+  "swap_tenor": 5,
+  "notional": 10000000,
+  "direction": "PAY",
+  "float_index": "EURIBOR6M",
+  "ois_index": "ESTR",
+  "fixed_rate": 2.5,
+  "float_spread_bp": 0,
+  "ois_quotes": {
+    "1Y": 1.94975,
+    "2Y": 2.037,
+    "3Y": 2.152,
+    "4Y": 2.253,
+    "5Y": 2.343
+  },
+  "float_quotes": {
+    "6M": 2.17,
+    "1Y": 2.207,
+    "2Y": 2.2935,
+    "3Y": 2.40755,
+    "5Y": 2.588
+  }
+}
