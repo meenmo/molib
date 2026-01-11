@@ -1,0 +1,79 @@
+{
+  "curve_date": "2026-01-07",
+  "curve_type": "KRXIRS",
+  "floating_swap_leg": "KRXCD91DFloating",
+  "curve_settlement_lag_days": 2,
+  "curve_quotes": [
+    { "tenor": "1D", "rate": 2.539375 },
+    { "tenor": "91D", "rate": 2.72 },
+    { "tenor": "6M", "rate": 2.7032142857 },
+    { "tenor": "9M", "rate": 2.705 },
+    { "tenor": "1Y", "rate": 2.7282142857 },
+    { "tenor": "18M", "rate": 2.7989285714 },
+    { "tenor": "2Y", "rate": 2.8896428571 },
+    { "tenor": "3Y", "rate": 3.0103571429 },
+    { "tenor": "4Y", "rate": 3.0871428571 },
+    { "tenor": "5Y", "rate": 3.1382142857 },
+    { "tenor": "6Y", "rate": 3.1860714286 },
+    { "tenor": "7Y", "rate": 3.2189285714 },
+    { "tenor": "8Y", "rate": 3.2378571429 },
+    { "tenor": "9Y", "rate": 3.26 },
+    { "tenor": "10Y", "rate": 3.2746428571 },
+    { "tenor": "12Y", "rate": 3.3028571429 },
+    { "tenor": "15Y", "rate": 3.2935714286 },
+    { "tenor": "20Y", "rate": 3.1914285714 }
+  ],
+  "bonds": [
+    {
+      "isin": "KR310102GD36",
+      "notional": 10000.0,
+      "px_dirty_mid": 100.535,
+      "cashflows": [
+        { "date": "2026-03-03", "coupon": 8925, "principal": 1000000 }
+      ]
+    },
+    {
+      "isin": "KR103501GB34",
+      "notional": 10000.0,
+      "px_dirty_mid": 100.229,
+      "cashflows": [
+        { "date": "2026-03-10", "coupon": 6250, "principal": 1000000 }
+      ]
+    },
+    {
+      "isin": "KR310102GD93",
+      "notional": 10000.0,
+      "px_dirty_mid": 101.431,
+      "cashflows": [
+        { "date": "2026-03-03", "coupon": 10000, "principal": 0 },
+        { "date": "2026-06-04", "coupon": 10000, "principal": 0 },
+        { "date": "2026-09-03", "coupon": 10000, "principal": 1000000 }
+      ]
+    },
+    {
+      "isin": "KR310102GE35",
+      "notional": 10000.0,
+      "px_dirty_mid": 101.401,
+      "cashflows": [
+        { "date": "2026-03-03", "coupon": 8575, "principal": 0 },
+        { "date": "2026-06-04", "coupon": 8575, "principal": 0 },
+        { "date": "2026-09-03", "coupon": 8575, "principal": 0 },
+        { "date": "2026-12-03", "coupon": 8575, "principal": 0 },
+        { "date": "2027-03-03", "coupon": 8575, "principal": 1000000 }
+      ]
+    },
+    {
+      "isin": "KR103501GD32",
+      "notional": 10000.0,
+      "px_dirty_mid": 101.819,
+      "cashflows": [
+        { "date": "2026-03-10", "coupon": 16250, "principal": 0 },
+        { "date": "2026-09-10", "coupon": 16250, "principal": 0 },
+        { "date": "2027-03-10", "coupon": 16250, "principal": 0 },
+        { "date": "2027-09-10", "coupon": 16250, "principal": 0 },
+        { "date": "2028-03-10", "coupon": 16250, "principal": 1000000 }
+      ]
+    }
+  ]
+}
+
