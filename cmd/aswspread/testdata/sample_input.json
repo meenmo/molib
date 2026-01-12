@@ -1,0 +1,849 @@
+{
+  "asw_type": "MMS",
+  "curve_date": "2026-01-09",
+  "curve_type": "OIS",
+  "floating_swap_leg": "SOFRFloating",
+  "curve_settlement_lag_days": 1,
+  "curve_quotes": [
+    {
+      "rate": 3.665,
+      "tenor": "1W"
+    },
+    {
+      "rate": 3.66557,
+      "tenor": "2W"
+    },
+    {
+      "rate": 3.67903,
+      "tenor": "3W"
+    },
+    {
+      "rate": 3.67838,
+      "tenor": "1M"
+    },
+    {
+      "rate": 3.68495,
+      "tenor": "2M"
+    },
+    {
+      "rate": 3.67135,
+      "tenor": "3M"
+    },
+    {
+      "rate": 3.65825,
+      "tenor": "4M"
+    },
+    {
+      "rate": 3.64705,
+      "tenor": "5M"
+    },
+    {
+      "rate": 3.62495,
+      "tenor": "6M"
+    },
+    {
+      "rate": 3.6,
+      "tenor": "7M"
+    },
+    {
+      "rate": 3.57745,
+      "tenor": "8M"
+    },
+    {
+      "rate": 3.55325,
+      "tenor": "9M"
+    },
+    {
+      "rate": 3.52975,
+      "tenor": "10M"
+    },
+    {
+      "rate": 3.50815,
+      "tenor": "11M"
+    },
+    {
+      "rate": 3.48945,
+      "tenor": "1Y"
+    },
+    {
+      "rate": 3.39045,
+      "tenor": "18M"
+    },
+    {
+      "rate": 3.3717,
+      "tenor": "2Y"
+    },
+    {
+      "rate": 3.3905,
+      "tenor": "3Y"
+    },
+    {
+      "rate": 3.4369,
+      "tenor": "4Y"
+    },
+    {
+      "rate": 3.49207,
+      "tenor": "5Y"
+    },
+    {
+      "rate": 3.55575,
+      "tenor": "6Y"
+    },
+    {
+      "rate": 3.62035,
+      "tenor": "7Y"
+    },
+    {
+      "rate": 3.6828,
+      "tenor": "8Y"
+    },
+    {
+      "rate": 3.74325,
+      "tenor": "9Y"
+    },
+    {
+      "rate": 3.8005,
+      "tenor": "10Y"
+    },
+    {
+      "rate": 3.85635,
+      "tenor": "11Y"
+    },
+    {
+      "rate": 3.90795,
+      "tenor": "12Y"
+    },
+    {
+      "rate": 4.036,
+      "tenor": "15Y"
+    },
+    {
+      "rate": 4.148,
+      "tenor": "20Y"
+    },
+    {
+      "rate": 4.16755,
+      "tenor": "25Y"
+    },
+    {
+      "rate": 4.14229,
+      "tenor": "30Y"
+    },
+    {
+      "rate": 4.04628,
+      "tenor": "40Y"
+    },
+    {
+      "rate": 3.94227,
+      "tenor": "50Y"
+    }
+  ],
+  "bonds": [
+    {
+      "isin": "US9128334S60",
+      "currency": "USD",
+      "days_to_settle": 1,
+      "day_count_convention": "ACT/ACT",
+      "bond_dirty_price": "80.44300",
+      "notional": 1000000,
+      "cashflows": [
+        {
+          "date": "2026-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2026-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-08-15",
+          "coupon": 0,
+          "principal": 1000000
+        }
+      ]
+    },
+    {
+      "isin": "US9128334T44",
+      "currency": "USD",
+      "days_to_settle": 1,
+      "day_count_convention": "ACT/ACT",
+      "bond_dirty_price": "78.62200",
+      "notional": 1000000,
+      "cashflows": [
+        {
+          "date": "2026-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2026-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2032-02-15",
+          "coupon": 0,
+          "principal": 1000000
+        }
+      ]
+    },
+    {
+      "isin": "US9128334V99",
+      "currency": "USD",
+      "days_to_settle": 1,
+      "day_count_convention": "ACT/ACT",
+      "bond_dirty_price": "75.02900",
+      "notional": 1000000,
+      "cashflows": [
+        {
+          "date": "2026-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2026-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2032-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2032-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2033-02-15",
+          "coupon": 0,
+          "principal": 1000000
+        }
+      ]
+    },
+    {
+      "isin": "US9128334W72",
+      "currency": "USD",
+      "days_to_settle": 1,
+      "day_count_convention": "ACT/ACT",
+      "bond_dirty_price": "73.25200",
+      "notional": 1000000,
+      "cashflows": [
+        {
+          "date": "2026-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2026-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2032-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2032-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2033-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2033-08-15",
+          "coupon": 0,
+          "principal": 1000000
+        }
+      ]
+    },
+    {
+      "isin": "US9128334Y39",
+      "currency": "USD",
+      "days_to_settle": 1,
+      "day_count_convention": "ACT/ACT",
+      "bond_dirty_price": "69.77300",
+      "notional": 1000000,
+      "cashflows": [
+        {
+          "date": "2026-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2026-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2032-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2032-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2033-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2033-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2034-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2034-08-15",
+          "coupon": 0,
+          "principal": 1000000
+        }
+      ]
+    },
+    {
+      "isin": "US9128337N47",
+      "currency": "USD",
+      "days_to_settle": 1,
+      "day_count_convention": "ACT/ACT",
+      "bond_dirty_price": "83.10700",
+      "notional": 1000000,
+      "cashflows": [
+        {
+          "date": "2026-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2026-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-11-15",
+          "coupon": 0,
+          "principal": 1000000
+        }
+      ]
+    },
+    {
+      "isin": "US9128337R50",
+      "currency": "USD",
+      "days_to_settle": 1,
+      "day_count_convention": "ACT/ACT",
+      "bond_dirty_price": "77.73700",
+      "notional": 1000000,
+      "cashflows": [
+        {
+          "date": "2026-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2026-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2032-05-15",
+          "coupon": 0,
+          "principal": 1000000
+        }
+      ]
+    },
+    {
+      "isin": "US9128337U89",
+      "currency": "USD",
+      "days_to_settle": 1,
+      "day_count_convention": "ACT/ACT",
+      "bond_dirty_price": "72.40200",
+      "notional": 1000000,
+      "cashflows": [
+        {
+          "date": "2026-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2026-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2031-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2032-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2032-11-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2033-05-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2033-11-15",
+          "coupon": 0,
+          "principal": 1000000
+        }
+      ]
+    },
+    {
+      "isin": "US912833XY10",
+      "currency": "USD",
+      "days_to_settle": 1,
+      "day_count_convention": "ACT/ACT",
+      "bond_dirty_price": "83.99200",
+      "notional": 1000000,
+      "cashflows": [
+        {
+          "date": "2026-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2026-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2027-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2028-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2029-08-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-02-15",
+          "coupon": 0,
+          "principal": 0
+        },
+        {
+          "date": "2030-08-15",
+          "coupon": 0,
+          "principal": 1000000
+        }
+      ]
+    }
+  ],
+  "curve_fixed_leg_day_count": "ACT/ACT"
+}
