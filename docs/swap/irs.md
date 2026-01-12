@@ -1,4 +1,4 @@
----
+
 
 # 📘 IRS (Fixed vs IBOR Float) — Pricing Note
 
@@ -64,19 +64,19 @@ $$PV_{flt} = \sum_{j=1}^{M} \left(N\delta_j(F_j+s)\right)\,D(T_j)$$
 
 Because the spread enters the coupon linearly, the floating leg PV can be decomposed as:
 
-\[
+$$
 PV_{flt}(s) = PV_{flt}(0) + s \cdot \underbrace{\sum_{j=1}^{M} N\delta_j D(T_j)}_{\mathcal{A}_{flt}}
-\]
+$$
 
-where \(\mathcal{A}_{flt}\) is the “floating-leg annuity” (currency per 1.00 of spread).
+where $\mathcal{A}_{flt}$ is the “floating-leg annuity” (currency per 1.00 of spread).
 
-If you solve for the spread \(s\) that makes the swap par (NPV = 0), a common rearrangement is:
+If you solve for the spread $s$ that makes the swap par (NPV = 0), a common rearrangement is:
 
-\[
+$$
 0 = PV_{rec} - PV_{pay} \quad\Rightarrow\quad s = \frac{PV_{fix} - PV_{flt}(0)}{\mathcal{A}_{flt}}
-\]
+$$
 
-This assumes the spread is applied to the floating leg and \(PV_{flt}\) is taken with the same sign as that leg; if the floating leg is the pay leg, the sign convention flips.
+This assumes the spread is applied to the floating leg and $PV_{flt}$ is taken with the same sign as that leg; if the floating leg is the pay leg, the sign convention flips.
 
 ---
 

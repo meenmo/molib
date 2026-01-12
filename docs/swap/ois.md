@@ -1,4 +1,4 @@
----
+
 
 # 📘 OIS (Overnight Index Swap) — Pricing Note
 
@@ -58,23 +58,23 @@ $$PV_{ois} \approx N\left(D(T_0) - D(T_M)\right)$$
 
 ### 3. Telescoping Form (Single-Curve, Idealized)
 
-If the floating coupon for period \([T_{j-1},T_j]\) is represented using the same curve used for discounting (and ignoring payment lags / convexity details), a common identity is:
+If the floating coupon for period $[T_{j-1},T_j]$ is represented using the same curve used for discounting (and ignoring payment lags / convexity details), a common identity is:
 
-\[
+$$
 CF^{ois}_j \approx N\left(\frac{D(T_{j-1})}{D(T_j)} - 1\right)
-\]
+$$
 
 Then the discounted PV of that coupon is:
 
-\[
+$$
 CF^{ois}_j\,D(T_j) \approx N\left(D(T_{j-1}) - D(T_j)\right)
-\]
+$$
 
 Summing across periods telescopes:
 
-\[
+$$
 PV_{ois} \approx \sum_{j=1}^{M} N\left(D(T_{j-1}) - D(T_j)\right) = N\left(D(T_0) - D(T_M)\right)
-\]
+$$
 
 This is the intuition behind the “float leg PV = DF(start) − DF(end)” shortcut.
 

@@ -1,6 +1,6 @@
----
 
-# 📘 Par Swap Spread — Solver Note
+
+# Par Swap Spread — Solver Note
 
 > **Master Equation**
 >
@@ -41,8 +41,8 @@ $$PV01_{\text{dec}} := \frac{\partial\,\text{NPV}}{\partial s}$$
 
 For a plain running spread added to coupon cashflows, this reduces to:
 
-- target = **receive** leg: \(PV01_{dec} = +\sum_j N\delta_j D(T_j)\)
-- target = **pay** leg: \(PV01_{dec} = -\sum_j N\delta_j D(T_j)\)
+- target = **receive** leg: $PV01_{dec} = +\sum_j N\delta_j D(T_j)$
+- target = **pay** leg: $PV01_{dec} = -\sum_j N\delta_j D(T_j)$
 
 So:
 

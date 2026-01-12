@@ -1,12 +1,12 @@
----
+# ASW Spread (OIS Version)
 
-# 📘 ASW Spread (OIS / €STR)
-
-> **The Master Equation**
+> **The Equation**
 > 
-> $$\text{ASW}_{bp} \;=\; \frac{P_{OIS} - P_{\text{dirty}}}{PV01_{bp}}$$
+> $$\text{ASW}_{bp} \approx \frac{P_{OIS} - P_{\text{dirty}}}{PV01_{bp}}$$
 > 
-> _Market convention in this note (and in `molib`): ASW is positive when the bond is “cheap” versus the OIS curve, i.e., when \(P_{OIS} > P_{\text{dirty}}\)._
+> **Market convention in this note (and in `molib`):**
+> 
+> ASW spread is positive when the bond is “cheap” versus the OIS curve, i.e., when $P_{OIS} > P_{\text{dirty}}$.
 
 ---
 
@@ -16,7 +16,7 @@ We consider a package where an investor buys a fixed-rate bond and enters an ass
 
 **Crucial Market Detail**:
 
-The bond pays on its own schedule (e.g., Annual, 30/360), while the spread $s$ is paid on the swap schedule (e.g., Quarterly, Act/360). We must distinguish between these two timelines.
+The bond pays on its own schedule (e.g., Annual, ACT/360), while the spread $s$ is paid on the swap schedule (e.g., Quarterly, Act/360). We must distinguish between these two timelines.
 
 **Notation:**
 
@@ -28,15 +28,13 @@ The bond pays on its own schedule (e.g., Annual, 30/360), while the spread $s$ i
     
 - $D(t)$: OIS discount factor from settlement date to $t$.
     
-- $P_{\text{dirty}}$: dirty price paid for the bond **in currency units** (e.g., \(P_{\text{dirty}} = N \times \text{price\%}\)).
+- $P_{\text{dirty}}$: dirty price paid for the bond **in currency units** (e.g., $P_{\text{dirty}} = N \times \text{price\%}$).
     
 - $P_{OIS}$: PV of the bond cashflows discounted on the OIS curve (also in currency units).
     
-- $\mathcal{A}_{swap}$: annuity PV for the **swap** schedule, \(\sum_j N\delta_j D(T_j)\) (currency per 1.00 of rate).
+- $\mathcal{A}_{swap}$: annuity PV for the **swap** schedule, $\sum_j N\delta_j D(T_j)$ (currency per 1.00 of rate).
 - $PV01_{bp}$: PV of **receiving 1bp** on the swap schedule:
-  \[
-  $PV01_{bp} = 10^{-4}\,\mathcal{A}_{swap} = \sum_j N\delta_j\cdot 10^{-4}\cdot D(T_j)$
-  \]
+  $$ PV01_{bp} = 10^{-4}\,\mathcal{A}_{swap} = \sum_j N\delta_j\cdot 10^{-4}\cdot D(T_j) $$
     
 
 ---
@@ -53,7 +51,7 @@ where $T$ is the maturity date.
 
 B. The Value of the Spread Stream ($PV_{spread}$)
 
-The spread is paid on the swap schedule ($T_j$). If the spread is quoted in **decimal rate units** (\(s_{\text{dec}}\), e.g., 10bp = 0.0010):
+The spread is paid on the swap schedule ($T_j$). If the spread is quoted in **decimal rate units** ($s_{\text{dec}}$, e.g., 10bp = 0.0010):
 
 $$PV_{spread}(s_{\text{dec}}) = \sum_{j=1}^{M} (s_{\text{dec}} \cdot N \cdot \delta_j) \cdot D(T_j)$$
 
@@ -73,9 +71,9 @@ The "PV gap to running spread" logic
 
 Under the market quoting convention used here, ASW is defined as the constant spread (in bp) on the swap schedule that converts the PV gap between the bond’s OIS PV and its market dirty price into a running spread:
 
-\[
-P_{OIS} - P_{\text{dirty}} \;=\; \text{ASW}_{bp}\cdot PV01_{bp}
-\]
+$$
+P_{OIS} - P_{\text{dirty}} = \text{ASW}_{bp}\cdot PV01_{bp}
+$$
 
 Equivalently (decimal units):
 
@@ -83,7 +81,7 @@ $$s_{\text{dec}} \cdot \mathcal{A}_{swap} = P_{OIS} - P_{\text{dirty}}$$
 
 $$s_{\text{dec}} = \frac{P_{OIS} - P_{\text{dirty}}}{\mathcal{A}_{swap}}$$
 
-and \(\text{ASW}_{bp} = 10^{4}\,s_{\text{dec}}\).
+and $\text{ASW}_{bp} = 10^{4}\,s_{\text{dec}}$.
 
 ---
 
