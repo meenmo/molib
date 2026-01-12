@@ -363,3 +363,126 @@ func krxTenorToYears(value string) (float64, error) {
 		return parseNum(t)
 	}
 }
+
+// TestASW_MMS_RatioRelationship verifies that MMS = ASW × (Par / DirtyPrice).
+func TestASW_MMS_RatioRelationship(t *testing.T) {
+	t.Parallel()
+
+	// Build a simple discount curve for testing.
+	settlement := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	quotes := map[string]float64{
+		"1Y":  3.5,
+		"2Y":  3.6,
+		"5Y":  3.8,
+		"10Y": 4.0,
+	}
+	disc := curve.BuildCurve(settlement, quotes, calendar.FD, 1)
+
+	// Test case: bond trading at discount (dirty price < par).
+	notional := 1000000.0
+	dirtyPricePct := 95.0 // 95% of par
+	dirtyPrice := notional * dirtyPricePct / 100.0
+
+	cashflows := []bond.Cashflow{
+		{Date: time.Date(2027, 1, 12, 0, 0, 0, 0, time.UTC), Coupon: 25000, Principal: 0},
+		{Date: time.Date(2028, 1, 12, 0, 0, 0, 0, time.UTC), Coupon: 25000, Principal: notional},
+	}
+
+	// Compute Par-Par ASW.
+	parParResult, err := bond.ComputeASWSpread(bond.ASWInput{
+		SettlementDate: settlement,
+		DirtyPrice:     dirtyPrice,
+		Notional:       notional,
+		Cashflows:      cashflows,
+		FloatLeg:       swaps.SOFRFloating,
+		DiscountCurve:  disc,
+		ASWType:        bond.ASWTypeParPar,
+	})
+	if err != nil {
+		t.Fatalf("Par-Par ASW failed: %v", err)
+	}
+
+	// Compute MMS ASW.
+	mmsResult, err := bond.ComputeASWSpread(bond.ASWInput{
+		SettlementDate: settlement,
+		DirtyPrice:     dirtyPrice,
+		Notional:       notional,
+		Cashflows:      cashflows,
+		FloatLeg:       swaps.SOFRFloating,
+		DiscountCurve:  disc,
+		ASWType:        bond.ASWTypeMMS,
+	})
+	if err != nil {
+		t.Fatalf("MMS ASW failed: %v", err)
+	}
+
+	// Verify: MMS = ASW × (Par / DirtyPrice).
+	expectedMMS := parParResult.SpreadBP * (notional / dirtyPrice)
+	tolerance := 0.0001 // Very tight tolerance since it's a direct calculation.
+
+	if math.Abs(mmsResult.SpreadBP-expectedMMS) > tolerance {
+		t.Errorf("MMS ratio mismatch: got %.6f bp, expected %.6f bp (Par-Par=%.6f bp)",
+			mmsResult.SpreadBP, expectedMMS, parParResult.SpreadBP)
+	}
+
+	// Log results for visibility.
+	t.Logf("Par-Par ASW: %.6f bp, MMS ASW: %.6f bp, Ratio: %.6f (expected: %.6f)",
+		parParResult.SpreadBP, mmsResult.SpreadBP,
+		mmsResult.SpreadBP/parParResult.SpreadBP, notional/dirtyPrice)
+}
+
+// TestASW_MMS_AtPar verifies that MMS equals Par-Par ASW when price equals par.
+func TestASW_MMS_AtPar(t *testing.T) {
+	t.Parallel()
+
+	settlement := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	quotes := map[string]float64{
+		"1Y":  3.5,
+		"2Y":  3.6,
+		"5Y":  3.8,
+		"10Y": 4.0,
+	}
+	disc := curve.BuildCurve(settlement, quotes, calendar.FD, 1)
+
+	notional := 1000000.0
+	dirtyPrice := notional // At par
+
+	cashflows := []bond.Cashflow{
+		{Date: time.Date(2027, 1, 12, 0, 0, 0, 0, time.UTC), Coupon: 25000, Principal: 0},
+		{Date: time.Date(2028, 1, 12, 0, 0, 0, 0, time.UTC), Coupon: 25000, Principal: notional},
+	}
+
+	parParResult, err := bond.ComputeASWSpread(bond.ASWInput{
+		SettlementDate: settlement,
+		DirtyPrice:     dirtyPrice,
+		Notional:       notional,
+		Cashflows:      cashflows,
+		FloatLeg:       swaps.SOFRFloating,
+		DiscountCurve:  disc,
+		ASWType:        bond.ASWTypeParPar,
+	})
+	if err != nil {
+		t.Fatalf("Par-Par ASW failed: %v", err)
+	}
+
+	mmsResult, err := bond.ComputeASWSpread(bond.ASWInput{
+		SettlementDate: settlement,
+		DirtyPrice:     dirtyPrice,
+		Notional:       notional,
+		Cashflows:      cashflows,
+		FloatLeg:       swaps.SOFRFloating,
+		DiscountCurve:  disc,
+		ASWType:        bond.ASWTypeMMS,
+	})
+	if err != nil {
+		t.Fatalf("MMS ASW failed: %v", err)
+	}
+
+	tolerance := 0.0001
+	if math.Abs(mmsResult.SpreadBP-parParResult.SpreadBP) > tolerance {
+		t.Errorf("At par, MMS should equal Par-Par: got MMS=%.6f bp, Par-Par=%.6f bp",
+			mmsResult.SpreadBP, parParResult.SpreadBP)
+	}
+
+	t.Logf("At par: Par-Par ASW=%.6f bp, MMS ASW=%.6f bp", parParResult.SpreadBP, mmsResult.SpreadBP)
+}

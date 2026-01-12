@@ -9,6 +9,16 @@ import (
 	"github.com/meenmo/molib/utils"
 )
 
+// ASWType specifies the asset swap spread calculation method.
+type ASWType string
+
+const (
+	// ASWTypeParPar uses par notional for PV01 calculation (Par-Par ASW Spread).
+	ASWTypeParPar ASWType = "PAR-PAR"
+	// ASWTypeMMS uses dirty price as notional for PV01 (Matched-Maturity ASW Spread).
+	ASWTypeMMS ASWType = "MMS"
+)
+
 type ASWInput struct {
 	SettlementDate time.Time
 	DirtyPrice     float64
@@ -20,6 +30,11 @@ type ASWInput struct {
 	FloatLeg market.LegConvention
 
 	DiscountCurve swap.DiscountCurve
+
+	// ASWType selects the spread calculation method.
+	// "PAR-PAR" (default): PV01 uses par notional.
+	// "mms": PV01 uses dirty price as notional (Matched-Maturity Spread).
+	ASWType ASWType
 }
 
 type ASWResult struct {
@@ -70,19 +85,30 @@ func ComputeASWSpread(in ASWInput) (ASWResult, error) {
 		return ASWResult{}, fmt.Errorf("ComputeASWSpread: float leg schedule: %w", err)
 	}
 
-	pv01 := 0.0
+	// Compute annuity factor (sum of discounted accruals).
+	annuityFactor := 0.0
 	for _, p := range periods {
 		if p.PayDate.Before(in.SettlementDate) {
 			continue
 		}
 		accrual := utils.YearFraction(p.StartDate, p.EndDate, string(in.FloatLeg.DayCount))
-		pv01 += in.Notional * accrual * 1e-4 * in.DiscountCurve.DF(p.PayDate)
+		annuityFactor += accrual * in.DiscountCurve.DF(p.PayDate)
 	}
-	if pv01 == 0 {
-		return ASWResult{}, fmt.Errorf("ComputeASWSpread: PV01 is zero")
+	if annuityFactor == 0 {
+		return ASWResult{}, fmt.Errorf("ComputeASWSpread: annuity factor is zero")
 	}
 
+	// Select notional based on ASW type.
+	// Par-Par (default): uses par notional.
+	// MMS: uses dirty price as notional.
+	notionalForPV01 := in.Notional
+	if in.ASWType == ASWTypeMMS {
+		notionalForPV01 = in.DirtyPrice
+	}
+
+	pv01 := notionalForPV01 * annuityFactor * 1e-4
 	spreadBP := (pvBondRF - in.DirtyPrice) / pv01
+
 	return ASWResult{
 		SpreadBP: spreadBP,
 		PVBondRF: pvBondRF,

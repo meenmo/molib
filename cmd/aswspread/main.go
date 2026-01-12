@@ -32,6 +32,8 @@ type aswFixture struct {
 	CurveSettlementLagDays int          `json:"curve_settlement_lag_days"`
 	CurveQuotes            []curveQuote `json:"curve_quotes"`
 	Bonds                  []bondCase   `json:"bonds"`
+	// ASWType selects the spread calculation method: "PAR-PAR" (default) or "MMS".
+	ASWType string `json:"asw_type"`
 }
 
 type curveQuote struct {
@@ -65,6 +67,7 @@ type aswOutput struct {
 	BondPVOIS           float64 `json:"bond_pv_ois"`
 	SwapPV01BP          float64 `json:"swap_pv01_bp"`
 	ASWSpreadBP         float64 `json:"asw_spread_bp"`
+	ASWType             string  `json:"asw_type"`
 }
 
 func main() {
@@ -146,6 +149,13 @@ func main() {
 
 		pxDirty, _ := tc.BondDirtyPrice.Float64()
 		dirtyPrice := tc.Notional * pxDirty / 100.0
+
+		// Determine ASW type from fixture (default: PAR-PAR).
+		aswType := bond.ASWTypeParPar
+		if strings.EqualFold(fixture.ASWType, "MMS") {
+			aswType = bond.ASWTypeMMS
+		}
+
 		res, err := bond.ComputeASWSpread(bond.ASWInput{
 			SettlementDate: settlement,
 			DirtyPrice:     dirtyPrice,
@@ -153,6 +163,7 @@ func main() {
 			Cashflows:      cfs,
 			FloatLeg:       floatLeg,
 			DiscountCurve:  disc,
+			ASWType:        aswType,
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "isin=%s ComputeASWSpread: %v\n", tc.ISIN, err)
@@ -174,6 +185,7 @@ func main() {
 			BondPVOIS:           res.PVBondRF,
 			SwapPV01BP:          res.PV01,
 			ASWSpreadBP:         res.SpreadBP,
+			ASWType:             string(aswType),
 		}
 		outputs = append(outputs, out)
 	}
