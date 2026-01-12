@@ -17,7 +17,6 @@ import (
 	krxch "github.com/meenmo/molib/swap/clearinghouse/krx"
 	"github.com/meenmo/molib/swap/curve"
 	"github.com/meenmo/molib/swap/market"
-	"github.com/meenmo/molib/utils"
 )
 
 type aswFixture struct {
@@ -41,16 +40,31 @@ type curveQuote struct {
 }
 
 type bondCase struct {
-	ISIN       string        `json:"isin"`
-	Notional   float64       `json:"notional"`
-	PXDirtyMid float64       `json:"px_dirty_mid"`
-	Cashflows  []cashflowRow `json:"cashflows"`
+	ISIN           string        `json:"isin"`
+	Notional       float64       `json:"notional"`
+	BondDirtyPrice json.Number   `json:"bond_dirty_price"`
+	Cashflows      []cashflowRow `json:"cashflows"`
 }
 
 type cashflowRow struct {
 	Date      string `json:"date"`
 	Coupon    int64  `json:"coupon"`
 	Principal int64  `json:"principal"`
+}
+
+type aswOutput struct {
+	CurveDate           string  `json:"curve_date"`
+	SettlementDate      string  `json:"settlement_date"`
+	ISIN                string  `json:"isin"`
+	CurveType           string  `json:"curve_type"`
+	CurveSettlementDays int     `json:"curve_settlement_days"`
+	CurveDayCount       string  `json:"curve_day_count,omitempty"`
+	BondMaturityDate    string  `json:"bond_maturity_date"`
+	BondNotional        float64 `json:"bond_notional"`
+	BondDirtyPrice      float64 `json:"bond_dirty_price"`
+	BondPVOIS           float64 `json:"bond_pv_ois"`
+	SwapPV01BP          float64 `json:"swap_pv01_bp"`
+	ASWSpreadBP         float64 `json:"asw_spread_bp"`
 }
 
 func main() {
@@ -113,6 +127,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	outputs := make([]aswOutput, 0, len(fixture.Bonds))
+
 	for _, tc := range fixture.Bonds {
 		cfs := make([]bond.Cashflow, 0, len(tc.Cashflows))
 		for _, r := range tc.Cashflows {
@@ -123,12 +139,13 @@ func main() {
 			}
 			cfs = append(cfs, bond.Cashflow{
 				Date:      d,
-				Coupon:    float64(r.Coupon) / 100.0,
-				Principal: float64(r.Principal) / 100.0,
+				Coupon:    float64(r.Coupon),
+				Principal: float64(r.Principal),
 			})
 		}
 
-		dirtyPrice := tc.Notional * tc.PXDirtyMid / 100.0
+		pxDirty, _ := tc.BondDirtyPrice.Float64()
+		dirtyPrice := tc.Notional * pxDirty / 100.0
 		res, err := bond.ComputeASWSpread(bond.ASWInput{
 			SettlementDate: settlement,
 			DirtyPrice:     dirtyPrice,
@@ -143,9 +160,29 @@ func main() {
 		}
 
 		maturity := maturityDate(cfs)
-		years := utils.YearFraction(curveDate, maturity, "ACT/365F")
-		fmt.Printf("curve_date=%s isin=%s maturity=%s years_to_maturity=%.6f asw_bp=%.6f\n",
-			fixture.CurveDate, tc.ISIN, maturity.Format("2006-01-02"), years, res.SpreadBP)
+
+		out := aswOutput{
+			CurveDate:           fixture.CurveDate,
+			SettlementDate:      settlement.Format("2006-01-02"),
+			ISIN:                tc.ISIN,
+			CurveType:           fixture.CurveType,
+			CurveSettlementDays: fixture.CurveSettlementLagDays,
+			CurveDayCount:       fixture.CurveFixedLegDayCount,
+			BondMaturityDate:    maturity.Format("2006-01-02"),
+			BondNotional:        tc.Notional,
+			BondDirtyPrice:      pxDirty,
+			BondPVOIS:           res.PVBondRF,
+			SwapPV01BP:          res.PV01,
+			ASWSpreadBP:         res.SpreadBP,
+		}
+		outputs = append(outputs, out)
+	}
+
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(outputs); err != nil {
+		fmt.Fprintf(os.Stderr, "json encode: %v\n", err)
+		os.Exit(1)
 	}
 }
 
@@ -207,7 +244,7 @@ func buildCurveFromConvention(settlement time.Time, quotes map[string]float64, c
 	switch fixedLegDC {
 	case "30/360":
 		return curve.BuildIBORDiscountCurve(settlement, quotes, cal, 1), nil
-	case "ACT/360":
+	case "ACT/360", "ACT/ACT":
 		return curve.BuildCurve(settlement, quotes, cal, 1), nil
 	default:
 		return nil, fmt.Errorf("unknown curve_fixed_leg_day_count %q", fixedLegDC)
@@ -243,6 +280,8 @@ func floatLegFromString(value string) (market.LegConvention, error) {
 		return swaps.TIBOR6MFloating, nil
 	case "TONAR", "TONARFloating":
 		return swaps.TONARFloating, nil
+	case "SOFR", "SOFRFloating":
+		return swaps.SOFRFloating, nil
 	default:
 		return market.LegConvention{}, fmt.Errorf("unknown float leg %q", value)
 	}
