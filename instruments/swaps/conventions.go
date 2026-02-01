@@ -67,6 +67,7 @@ var (
 		BusinessDayAdjustment: market.ModifiedFollowing,
 		RollConvention:        market.BackwardEOM,
 		Calendar:              calendar.TARGET,
+		ScheduleDirection:     market.ScheduleBackward,
 	}
 
 	ESTRFloating = market.LegConvention{
@@ -84,6 +85,7 @@ var (
 		RateCutoffDays:          1,
 		IncludeInitialPrincipal: true,
 		IncludeFinalPrincipal:   true,
+		ScheduleDirection:       market.ScheduleBackward,
 	}
 
 	EURIBORFixed = market.LegConvention{

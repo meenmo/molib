@@ -300,10 +300,8 @@ func (c *Curve) buildOISCoupons(maturity time.Time) []oisCoupon {
 			// EUR IBOR IRS fixed legs pay on accrual end date (no payment lag).
 			payDelay = 0
 		} else {
-			// Bloomberg SWPM convention for EUR ESTR OIS fixed legs is 30/360
-			// (fixed coupons are computed on a 30/360 basis even though the curve
-			// represents an overnight index swap).
-			accrualDC = "30/360"
+			// EUR ESTR OIS fixed legs use ACT/360 (confirmed by Bloomberg SWPM cashflows).
+			accrualDC = "ACT/360"
 			// EUR OIS fixed legs typically pay T+1 (ESTR convention).
 			payDelay = 1
 		}
