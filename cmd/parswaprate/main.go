@@ -23,6 +23,8 @@ type PricingInput struct {
 	TradeDate         string             `json:"trade_date"`
 	ForwardTenor      int                `json:"forward_tenor"`
 	SwapTenor         int                `json:"swap_tenor"`
+	EffectiveDate     string             `json:"effective_date,omitempty"`
+	MaturityDate      string             `json:"maturity_date,omitempty"`
 	Notional          float64            `json:"notional"`
 	FloatingRateIndex string             `json:"floating_rate_index"`
 	OISQuotes         map[string]float64 `json:"ois_quotes"`
@@ -32,7 +34,7 @@ type PricingInput struct {
 // PricingOutput defines the JSON output schema.
 type PricingOutput struct {
 	TaskID        string  `json:"task_id,omitempty"`
-	ParRatePct    float64 `json:"par_rate_pct"`
+	ParRatePct    float64 `json:"par_rate"`
 	FixedLegPV    float64 `json:"fixed_leg_pv"`
 	FloatingLegPV float64 `json:"floating_leg_pv"`
 	TotalNPV      float64 `json:"total_npv"`
@@ -215,21 +217,50 @@ func calculateParRate(input PricingInput) (*PricingOutput, error) {
 		return nil, fmt.Errorf("ois_quotes is required")
 	}
 
-	trade, err := swap.InterestRateSwap(swap.InterestRateSwapParams{
-		DataSource:        swap.DataSourceBGN,
-		ClearingHouse:     swap.ClearingHouseOTC,
-		CurveDate:         curveDate,
-		TradeDate:         tradeDate,
-		ValuationDate:     tradeDate,
-		ForwardTenorYears: input.ForwardTenor,
-		SwapTenorYears:    input.SwapTenor,
-		Notional:          input.Notional,
-		PayLeg:            preset.FixedLeg,
-		RecLeg:            preset.FloatLeg,
-		DiscountingOIS:    preset.FloatLeg,
-		OISQuotes:         input.OISQuotes,
-		RecLegQuotes:      input.OISQuotes,
-	})
+	hasExplicitDates := input.EffectiveDate != "" || input.MaturityDate != ""
+	hasTenors := input.ForwardTenor > 0 || input.SwapTenor > 0
+
+	if hasExplicitDates && hasTenors {
+		return nil, fmt.Errorf("specify either (effective_date + maturity_date) or (forward_tenor + swap_tenor), not both")
+	}
+	if hasExplicitDates && (input.EffectiveDate == "" || input.MaturityDate == "") {
+		return nil, fmt.Errorf("both effective_date and maturity_date are required when using explicit dates")
+	}
+	if !hasExplicitDates && input.SwapTenor <= 0 {
+		return nil, fmt.Errorf("swap_tenor is required when effective_date/maturity_date are not specified")
+	}
+
+	params := swap.InterestRateSwapParams{
+		DataSource:     swap.DataSourceBGN,
+		ClearingHouse:  swap.ClearingHouseOTC,
+		CurveDate:      curveDate,
+		TradeDate:      tradeDate,
+		ValuationDate:  tradeDate,
+		Notional:       input.Notional,
+		PayLeg:         preset.FixedLeg,
+		RecLeg:         preset.FloatLeg,
+		DiscountingOIS: preset.FloatLeg,
+		OISQuotes:      input.OISQuotes,
+		RecLegQuotes:   input.OISQuotes,
+	}
+
+	if hasExplicitDates {
+		effDate, err := time.Parse("2006-01-02", input.EffectiveDate)
+		if err != nil {
+			return nil, fmt.Errorf("invalid effective_date: %v", err)
+		}
+		matDate, err := time.Parse("2006-01-02", input.MaturityDate)
+		if err != nil {
+			return nil, fmt.Errorf("invalid maturity_date: %v", err)
+		}
+		params.EffectiveDate = effDate
+		params.MaturityDate = matDate
+	} else {
+		params.ForwardTenorYears = input.ForwardTenor
+		params.SwapTenorYears = input.SwapTenor
+	}
+
+	trade, err := swap.InterestRateSwap(params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build swap: %v", err)
 	}
