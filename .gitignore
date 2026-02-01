@@ -1,2 +1,4 @@
 .claude/
 .sisyphus/
+.vscode/
+.DS_Store
