@@ -88,6 +88,36 @@ var (
 		ScheduleDirection:       market.ScheduleBackward,
 	}
 
+	SONIAFixed = market.LegConvention{
+		LegType:               market.LegFixed,
+		DayCount:              market.Act365F,
+		PayFrequency:          market.FreqAnnual,
+		FixingLagDays:         0,
+		PayDelayDays:          0,
+		BusinessDayAdjustment: market.ModifiedFollowing,
+		RollConvention:        market.BackwardEOM,
+		Calendar:              calendar.EN,
+		ScheduleDirection:     market.ScheduleBackward,
+	}
+
+	SONIAFloating = market.LegConvention{
+		LegType:                 market.LegFloating,
+		ReferenceIndex:          market.SONIA,
+		DayCount:                market.Act365F,
+		ResetFrequency:          market.FreqDaily,
+		PayFrequency:            market.FreqAnnual,
+		FixingLagDays:           0,
+		PayDelayDays:            0,
+		BusinessDayAdjustment:   market.ModifiedFollowing,
+		RollConvention:          market.BackwardEOM,
+		Calendar:                calendar.EN,
+		ResetPosition:           market.ResetInArrears,
+		RateCutoffDays:          1,
+		IncludeInitialPrincipal: true,
+		IncludeFinalPrincipal:   true,
+		ScheduleDirection:       market.ScheduleBackward,
+	}
+
 	EURIBORFixed = market.LegConvention{
 		LegType:               market.LegFixed,
 		DayCount:              market.Act360,
@@ -289,5 +319,11 @@ var (
 	OISTONAR = OISPreset{
 		FixedLeg: TONARFixed,
 		FloatLeg: TONARFloating,
+	}
+
+	// JPY OIS: fixed vs TONAR.
+	OISSONIA = OISPreset{
+		FixedLeg: SONIAFixed,
+		FloatLeg: SONIAFloating,
 	}
 )

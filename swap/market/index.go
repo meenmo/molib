@@ -8,6 +8,7 @@ const (
 	EURIBOR3M ReferenceIndex = "EURIBOR3M"
 	EURIBOR6M ReferenceIndex = "EURIBOR6M"
 	TONAR     ReferenceIndex = "TONAR"
+	SONIA     ReferenceIndex = "SONIA"
 	TIBOR3M   ReferenceIndex = "TIBOR3M"
 	TIBOR6M   ReferenceIndex = "TIBOR6M"
 	SOFR      ReferenceIndex = "SOFR"
@@ -17,7 +18,7 @@ const (
 // IsOvernight reports whether the reference rate is an overnight index used in OIS discounting/projection.
 func IsOvernight(r ReferenceIndex) bool {
 	switch r {
-	case ESTR, TONAR, SOFR:
+	case ESTR, TONAR, SOFR, SONIA:
 		return true
 	default:
 		return false
