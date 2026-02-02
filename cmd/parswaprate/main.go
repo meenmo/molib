@@ -79,6 +79,15 @@ var oisPresets = map[string]OISPreset{
 			return l
 		}(),
 	},
+	"SONIA": {
+		FixedLeg: swaps.SONIAFixed,
+		FloatLeg: func() market.LegConvention {
+			l := swaps.SONIAFloating
+			l.IncludeInitialPrincipal = false
+			l.IncludeFinalPrincipal = false
+			return l
+		}(),
+	},
 }
 
 func main() {
@@ -210,7 +219,7 @@ func calculateParRate(input PricingInput) (*PricingOutput, error) {
 
 	preset, ok := oisPresets[input.FloatingRateIndex]
 	if !ok {
-		return nil, fmt.Errorf("unknown floating_rate_index: %s (must be TONAR, ESTR, or SOFR)", input.FloatingRateIndex)
+		return nil, fmt.Errorf("unknown floating_rate_index: %s (must be TONAR, ESTR, SOFR, or SONIA)", input.FloatingRateIndex)
 	}
 
 	if input.OISQuotes == nil || len(input.OISQuotes) == 0 {

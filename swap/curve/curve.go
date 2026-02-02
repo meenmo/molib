@@ -293,6 +293,10 @@ func (c *Curve) buildOISCoupons(maturity time.Time) []oisCoupon {
 			accrualDC = "ACT/360"
 		}
 		payDelay = 2
+	} else if c.cal == calendar.EN {
+		// GBP SONIA OIS fixed legs use ACT/365F with no payment delay.
+		accrualDC = "ACT/365F"
+		payDelay = 0
 	} else if c.cal == calendar.TARGET {
 		// Use 30/360 for IBOR discounting, ACT/360 for OIS
 		if c.fixedLegDC == FixedLegDayCountIBOR {

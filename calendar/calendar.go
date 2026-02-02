@@ -11,6 +11,7 @@ const (
 	FD     CalendarID = "FD" // Federal Reserve (Fedwire-style) calendar
 	GT     CalendarID = "GT" // US Government bond calendar
 	KR     CalendarID = "KOR"
+	EN     CalendarID = "EN"
 )
 
 // buildHolidayMap creates a holiday lookup map from a list of date strings.
@@ -29,6 +30,7 @@ var targetHolidays = map[string]struct{}{}
 var jpHolidays = map[string]struct{}{}
 var fdHolidays = map[string]struct{}{}
 var gtHolidays = map[string]struct{}{}
+var enHolidays = map[string]struct{}{}
 var krHolidays = buildHolidayMap(krHolidayList)
 
 func isHoliday(cal CalendarID, t time.Time) bool {
@@ -45,6 +47,9 @@ func isHoliday(cal CalendarID, t time.Time) bool {
 		return ok
 	case GT:
 		_, ok := gtHolidays[key]
+		return ok
+	case EN:
+		_, ok := enHolidays[key]
 		return ok
 	case KR:
 		_, ok := krHolidays[key]
