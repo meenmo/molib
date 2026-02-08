@@ -1,0 +1,562 @@
+[
+  {
+    "task_id": "2025-12-29",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.8,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2025-12-30",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.57,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-02",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.11,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-05",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.4,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-06",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.68,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-07",
+    "settlement_date": "2026-03-10",
+    "futures_price": 128.05,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-08",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.86,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-09",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.95,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-12",
+    "settlement_date": "2026-03-10",
+    "futures_price": 128.17,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-13",
+    "settlement_date": "2026-03-10",
+    "futures_price": 128.09,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-14",
+    "settlement_date": "2026-03-10",
+    "futures_price": 128.36,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-15",
+    "settlement_date": "2026-03-10",
+    "futures_price": 128.42,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-16",
+    "settlement_date": "2026-03-10",
+    "futures_price": 128.14,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-19",
+    "settlement_date": "2026-03-10",
+    "futures_price": 128.22,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-20",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.97,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-21",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.81,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-22",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.76,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-23",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.6,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-26",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.95,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-27",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.92,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-28",
+    "settlement_date": "2026-03-10",
+    "futures_price": 128.03,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-29",
+    "settlement_date": "2026-03-10",
+    "futures_price": 128.33,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-01-30",
+    "settlement_date": "2026-03-10",
+    "futures_price": 128.17,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-02-02",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.94,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-02-03",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.69,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-02-04",
+    "settlement_date": "2026-03-10",
+    "futures_price": 127.98,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-02-05",
+    "settlement_date": "2026-03-10",
+    "futures_price": 128.24,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  },
+  {
+    "task_id": "2026-02-06",
+    "settlement_date": "2026-03-10",
+    "futures_price": 128.2,
+    "conversion_factor": 0.763168,
+    "coupon_rate": 2.5,
+    "day_count": "ACT/ACT",
+    "coupon_frequency": 1,
+    "cashflows": [
+      {"date": "2027-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2028-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2029-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2030-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2031-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2032-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2033-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2034-02-15", "coupon": 25000, "principal": 0},
+      {"date": "2035-02-15", "coupon": 25000, "principal": 1000000}
+    ]
+  }
+]
