@@ -212,7 +212,6 @@ func (c *Curve) bootstrapDiscountFactors() map[time.Time]float64 {
 	// First pillar at settlement has DF = 1.0
 	df[dates[0]] = 1.0
 
-	// Only bootstrap dates that have explicit par quotes (quoted tenors)
 	dateToTenor := c.paymentDatesToTenor()
 	quotedDates := []time.Time{dates[0]}
 	for _, d := range dates[1:] {
@@ -221,30 +220,33 @@ func (c *Curve) bootstrapDiscountFactors() map[time.Time]float64 {
 			quotedDates = append(quotedDates, d)
 		}
 	}
+	lastQuotedDate := quotedDates[len(quotedDates)-1]
 
-	// Bootstrap each quoted pillar sequentially
-	for i := 1; i < len(quotedDates); i++ {
-		maturity := quotedDates[i]
+	bootstrappedDates := []time.Time{dates[0]}
+	for _, maturity := range dates[1:] {
+		if maturity.After(lastQuotedDate) {
+			break
+		}
 		parRate := c.parRates[maturity]
 
 		// Build fixed leg schedule for this maturity
 		coupons := c.buildOISCoupons(maturity)
 
 		// Solve for DF(maturity)
-		df[maturity] = c.solveOISDiscountFactor(quotedDates[:i+1], df, coupons, parRate)
+		bootstrappedDates = append(bootstrappedDates, maturity)
+		df[maturity] = c.solveOISDiscountFactor(bootstrappedDates, df, coupons, parRate)
 	}
 
 	// Interpolate DFs for all other payment dates using step-forward (log-linear)
 	for _, d := range dates {
 		if _, ok := df[d]; !ok {
-			// Find adjacent quoted dates using binary search
-			d1, d2, found := findBracket(quotedDates, d)
+			d1, d2, found := findBracket(bootstrappedDates, d)
 
 			if !found {
 				// Handle dates beyond the last quoted date - use flat extrapolation
-				if !d.Before(quotedDates[len(quotedDates)-1]) {
-					lastQuoted := quotedDates[len(quotedDates)-1]
-					df[d] = df[lastQuoted]
+				if !d.Before(bootstrappedDates[len(bootstrappedDates)-1]) {
+					lastSolved := bootstrappedDates[len(bootstrappedDates)-1]
+					df[d] = df[lastSolved]
 				}
 				continue
 			}
