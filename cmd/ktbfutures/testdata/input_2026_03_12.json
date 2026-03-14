@@ -1,0 +1,35 @@
+{
+  "date": "2026-03-12",
+  "cd91": 2.83,
+  "baskets": [
+    {
+      "tenor": 3,
+      "bonds": [
+        {"isin": "KR103501GEC6", "issue_date": "2024-12-10", "maturity_date": "2027-12-10", "coupon_rate": 2.875, "market_yield": 3.03},
+        {"isin": "KR103501GF63", "issue_date": "2025-06-10", "maturity_date": "2028-06-10", "coupon_rate": 2.25, "market_yield": 3.19},
+        {"isin": "KR103503GF95", "issue_date": "2025-09-10", "maturity_date": "2030-09-10", "coupon_rate": 2.5, "market_yield": 3.524}
+      ]
+    },
+    {
+      "tenor": 5,
+      "bonds": [
+        {"isin": "KR103503GF38", "issue_date": "2025-03-10", "maturity_date": "2030-03-10", "coupon_rate": 2.625, "market_yield": 3.467},
+        {"isin": "KR103503GF95", "issue_date": "2025-09-10", "maturity_date": "2030-09-10", "coupon_rate": 2.5, "market_yield": 3.524}
+      ]
+    },
+    {
+      "tenor": 10,
+      "bonds": [
+        {"isin": "KR103502GEC4", "issue_date": "2024-12-10", "maturity_date": "2034-12-10", "coupon_rate": 3.0, "market_yield": 3.626},
+        {"isin": "KR103502GF62", "issue_date": "2025-06-10", "maturity_date": "2035-06-10", "coupon_rate": 2.625, "market_yield": 3.68}
+      ]
+    },
+    {
+      "tenor": 30,
+      "bonds": [
+        {"isin": "KR103502GF39", "issue_date": "2025-03-10", "maturity_date": "2055-03-10", "coupon_rate": 2.625, "market_yield": 3.572},
+        {"isin": "KR103502GF96", "issue_date": "2025-09-10", "maturity_date": "2055-09-10", "coupon_rate": 2.625, "market_yield": 3.565}
+      ]
+    }
+  ]
+}
