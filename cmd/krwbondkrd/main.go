@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/meenmo/molib/bond"
+	"github.com/meenmo/molib/bond/greeks"
 )
 
 func main() {
@@ -33,12 +33,12 @@ func main() {
 		exitError(fmt.Sprintf("read input: %v", err))
 	}
 
-	var input bond.KRDInput
+	var input greeks.KRDInput
 	if err := json.Unmarshal(raw, &input); err != nil {
 		exitError(fmt.Sprintf("parse JSON: %v", err))
 	}
 
-	output, err := bond.ComputeKRD(input)
+	output, err := greeks.ComputeKRD(input)
 	if err != nil {
 		exitError(err.Error())
 	}
@@ -56,10 +56,6 @@ func readInput(path string) ([]byte, error) {
 }
 
 func exitError(msg string) {
-	out := struct {
-		Error string `json:"error"`
-	}{Error: msg}
-	b, _ := json.Marshal(out)
-	fmt.Fprintln(os.Stderr, string(b))
+	fmt.Fprintf(os.Stderr, `{"error":"%s"}`+"\n", msg)
 	os.Exit(1)
 }

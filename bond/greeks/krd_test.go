@@ -1,4 +1,4 @@
-package bond
+package greeks
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ import (
 func loadKRDTestInput(t *testing.T) KRDInput {
 	t.Helper()
 
-	raw, err := os.ReadFile("../cmd/krwbondkrd/testdata/input.json")
+	raw, err := os.ReadFile("../../cmd/krwbondkrd/testdata/input.json")
 	if err != nil {
 		t.Fatalf("read testdata: %v", err)
 	}
