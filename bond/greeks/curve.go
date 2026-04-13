@@ -25,8 +25,8 @@ func normalizeCurvePoints(points []CurvePoint) ([]CurvePoint, error) {
 	return normalized, nil
 }
 
-// buildShiftedCurves builds 2*N shifted curves in parallel (±bump for each key tenor).
-func buildShiftedCurves(points []CurvePoint, bumpPct float64) (map[int]map[int]*zeroCurve, error) {
+// buildShiftedCurves builds 2*N shifted curves in parallel.
+func buildShiftedCurves(points []CurvePoint, bumpPct float64, freq int) (map[int]map[int]*zeroCurve, error) {
 	results := make(chan shiftedCurveResult, len(points)*2)
 	var wg sync.WaitGroup
 	for idx := range points {
@@ -36,7 +36,7 @@ func buildShiftedCurves(points []CurvePoint, bumpPct float64) (map[int]map[int]*
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				curve, err := bootstrapZeroCurve(points, idx, float64(dir)*bumpPct)
+				curve, err := bootstrapZeroCurve(points, idx, float64(dir)*bumpPct, freq)
 				results <- shiftedCurveResult{keyIndex: idx, direction: dir, curve: curve, err: err}
 			}()
 		}
@@ -57,26 +57,26 @@ func buildShiftedCurves(points []CurvePoint, bumpPct float64) (map[int]map[int]*
 	return shifted, nil
 }
 
-// bootstrapZeroCurve converts par yields to discount factors on a 0.5Y step grid.
-// If shiftIndex >= 0, applies a wave shift at that key tenor.
-func bootstrapZeroCurve(points []CurvePoint, shiftIndex int, bumpPct float64) (*zeroCurve, error) {
+// bootstrapZeroCurve converts par yields to discount factors on a 1/freq step grid.
+func bootstrapZeroCurve(points []CurvePoint, shiftIndex int, bumpPct float64, freq int) (*zeroCurve, error) {
+	step := 1.0 / float64(freq)
 	maxTenor := points[len(points)-1].Tenor
-	steps := int(math.Round(maxTenor * 2.0))
-	if steps < 1 {
+	nSteps := int(math.Round(maxTenor / step))
+	if nSteps < 1 {
 		return nil, fmt.Errorf("ComputeKRD: invalid max tenor %.6f", maxTenor)
 	}
 
-	grid := make([]float64, 0, steps)
-	discounts := make([]float64, 0, steps)
+	grid := make([]float64, 0, nSteps)
+	discounts := make([]float64, 0, nSteps)
 	sumPrev := 0.0
-	for i := 1; i <= steps; i++ {
-		tenor := float64(i) / 2.0
+	for i := 1; i <= nSteps; i++ {
+		tenor := float64(i) * step
 		parPct := parYieldAt(points, tenor) + waveShift(points, shiftIndex, tenor, bumpPct)
 		if parPct <= -100.0 {
 			return nil, fmt.Errorf("ComputeKRD: shifted par yield too low at tenor %.2f", tenor)
 		}
 		rate := parPct / 100.0
-		couponPerPeriod := rate / 2.0
+		couponPerPeriod := rate / float64(freq)
 		df := (1.0 - couponPerPeriod*sumPrev) / (1.0 + couponPerPeriod)
 		if df <= 0 || math.IsNaN(df) || math.IsInf(df, 0) {
 			return nil, fmt.Errorf("ComputeKRD: invalid discount factor at tenor %.2f", tenor)
@@ -92,6 +92,8 @@ func bootstrapZeroCurve(points []CurvePoint, shiftIndex int, bumpPct float64) (*
 		discounts:  discounts,
 		shiftIndex: shiftIndex,
 		bumpPct:    bumpPct,
+		freq:       freq,
+		step:       step,
 	}, nil
 }
 
@@ -100,7 +102,7 @@ func (z *zeroCurve) discountAt(tenor float64) float64 {
 	if tenor <= 0 {
 		return 1.0
 	}
-	if tenor < 0.5 {
+	if tenor < z.step {
 		parPct := parYieldAt(z.points, tenor) + waveShift(z.points, z.shiftIndex, tenor, z.bumpPct)
 		return math.Exp(-(parPct / 100.0) * tenor)
 	}
@@ -145,8 +147,7 @@ func parYieldAt(points []CurvePoint, tenor float64) float64 {
 	return left.ParYield + weight*(right.ParYield-left.ParYield)
 }
 
-// waveShift computes the Bloomberg triangle wave shift at a given tenor
-// for the specified key tenor index.
+// waveShift computes the Bloomberg triangle wave shift at a given tenor.
 func waveShift(points []CurvePoint, shiftIndex int, tenor, bumpPct float64) float64 {
 	if shiftIndex < 0 || shiftIndex >= len(points) || bumpPct == 0 {
 		return 0

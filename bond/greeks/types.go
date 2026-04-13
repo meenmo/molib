@@ -2,10 +2,11 @@ package greeks
 
 // KRDInput holds all inputs for the KRD calculation.
 type KRDInput struct {
-	ValuationDate string       `json:"valuation_date"`
-	BumpBP        float64      `json:"bump_bp"`
-	Curve         []CurvePoint `json:"curve"`
-	Bonds         []BondInput  `json:"bonds"`
+	ValuationDate   string       `json:"valuation_date"`
+	BumpBP          float64      `json:"bump_bp"`
+	CouponFrequency int          `json:"coupon_frequency"` // 2=semi-annual, 4=quarterly
+	Curve           []CurvePoint `json:"curve"`
+	Bonds           []BondInput  `json:"bonds"`
 }
 
 // CurvePoint is a par-yield curve observation keyed by tenor in years.
@@ -60,6 +61,8 @@ type zeroCurve struct {
 	discounts  []float64
 	shiftIndex int
 	bumpPct    float64
+	freq       int     // coupon frequency (2 or 4)
+	step       float64 // 1.0/freq
 }
 
 // cashflow is an internal parsed cashflow with pre-computed tenor.
