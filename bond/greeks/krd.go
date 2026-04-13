@@ -11,13 +11,6 @@ import (
 )
 
 // ComputeKRD calculates Key Rate Durations for a set of bonds.
-//
-// It builds shifted par yield curves using the Bloomberg triangle wave method,
-// bootstraps each into a zero curve, and reprices all bonds to compute
-// per-key-tenor sensitivities.
-//
-// Phase 1 (shifted curves) and Phase 2 (bond repricing) are parallelized
-// using goroutines.
 func ComputeKRD(in KRDInput) (KRDOutput, error) {
 	if strings.TrimSpace(in.ValuationDate) == "" {
 		return KRDOutput{}, fmt.Errorf("ComputeKRD: valuation_date is required")
@@ -37,15 +30,21 @@ func ComputeKRD(in KRDInput) (KRDOutput, error) {
 		return KRDOutput{}, fmt.Errorf("ComputeKRD: bonds are required")
 	}
 
+	// Default to semi-annual if not specified.
+	freq := in.CouponFrequency
+	if freq <= 0 {
+		freq = 2
+	}
+
 	// Build base zero curve (no shift).
-	baseCurve, err := bootstrapZeroCurve(points, -1, 0)
+	baseCurve, err := bootstrapZeroCurve(points, -1, 0, freq)
 	if err != nil {
 		return KRDOutput{}, err
 	}
 
 	// Phase 1: Build 2N shifted curves in parallel.
 	bumpPct := in.BumpBP / 100.0
-	shiftedCurves, err := buildShiftedCurves(points, bumpPct)
+	shiftedCurves, err := buildShiftedCurves(points, bumpPct, freq)
 	if err != nil {
 		return KRDOutput{}, err
 	}
