@@ -26,7 +26,7 @@ func normalizeCurvePoints(points []CurvePoint) ([]CurvePoint, error) {
 }
 
 // buildShiftedCurves builds 2*N shifted curves in parallel.
-func buildShiftedCurves(points []CurvePoint, bumpPct float64, freq int) (map[int]map[int]*zeroCurve, error) {
+func buildShiftedCurves(points []CurvePoint, bumpPct float64, freq int, dayCount string) (map[int]map[int]*zeroCurve, error) {
 	results := make(chan shiftedCurveResult, len(points)*2)
 	var wg sync.WaitGroup
 	for idx := range points {
@@ -36,7 +36,7 @@ func buildShiftedCurves(points []CurvePoint, bumpPct float64, freq int) (map[int
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				curve, err := bootstrapZeroCurve(points, idx, float64(dir)*bumpPct, freq)
+				curve, err := bootstrapZeroCurve(points, idx, float64(dir)*bumpPct, freq, dayCount)
 				results <- shiftedCurveResult{keyIndex: idx, direction: dir, curve: curve, err: err}
 			}()
 		}
@@ -58,7 +58,7 @@ func buildShiftedCurves(points []CurvePoint, bumpPct float64, freq int) (map[int
 }
 
 // bootstrapZeroCurve converts par yields to discount factors on a 1/freq step grid.
-func bootstrapZeroCurve(points []CurvePoint, shiftIndex int, bumpPct float64, freq int) (*zeroCurve, error) {
+func bootstrapZeroCurve(points []CurvePoint, shiftIndex int, bumpPct float64, freq int, dayCount string) (*zeroCurve, error) {
 	step := 1.0 / float64(freq)
 	maxTenor := points[len(points)-1].Tenor
 	nSteps := int(math.Round(maxTenor / step))
@@ -76,7 +76,7 @@ func bootstrapZeroCurve(points []CurvePoint, shiftIndex int, bumpPct float64, fr
 			return nil, fmt.Errorf("ComputeKRD: shifted par yield too low at tenor %.2f", tenor)
 		}
 		rate := parPct / 100.0
-		couponPerPeriod := rate / float64(freq)
+		couponPerPeriod := rate * dcf(step, dayCount)
 		df := (1.0 - couponPerPeriod*sumPrev) / (1.0 + couponPerPeriod)
 		if df <= 0 || math.IsNaN(df) || math.IsInf(df, 0) {
 			return nil, fmt.Errorf("ComputeKRD: invalid discount factor at tenor %.2f", tenor)
@@ -94,6 +94,7 @@ func bootstrapZeroCurve(points []CurvePoint, shiftIndex int, bumpPct float64, fr
 		bumpPct:    bumpPct,
 		freq:       freq,
 		step:       step,
+		dayCount:   dayCount,
 	}, nil
 }
 
@@ -104,7 +105,7 @@ func (z *zeroCurve) discountAt(tenor float64) float64 {
 	}
 	if tenor < z.step {
 		parPct := parYieldAt(z.points, tenor) + waveShift(z.points, z.shiftIndex, tenor, z.bumpPct)
-		return math.Exp(-(parPct / 100.0) * tenor)
+		return math.Exp(-(parPct / 100.0) * dcf(tenor, z.dayCount))
 	}
 	if tenor <= z.grid[0] {
 		return z.discounts[0]
@@ -195,4 +196,12 @@ func priceCashflows(curve *zeroCurve, cashflows []cashflow) float64 {
 		price += cf.amount * curve.discountAt(cf.tenor)
 	}
 	return price
+}
+
+// dcf returns the day-count-adjusted fraction for a given tenor.
+func dcf(tenor float64, dayCount string) float64 {
+	if dayCount == "ACT/360" {
+		return tenor * 365.0 / 360.0
+	}
+	return tenor
 }

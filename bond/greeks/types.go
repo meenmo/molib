@@ -5,6 +5,7 @@ type KRDInput struct {
 	ValuationDate   string       `json:"valuation_date"`
 	BumpBP          float64      `json:"bump_bp"`
 	CouponFrequency int          `json:"coupon_frequency"` // 2=semi-annual, 4=quarterly
+	DayCount        string       `json:"day_count"`        // ACT/ACT, ACT/365, ACT/360
 	Curve           []CurvePoint `json:"curve"`
 	Bonds           []BondInput  `json:"bonds"`
 }
@@ -63,6 +64,7 @@ type zeroCurve struct {
 	bumpPct    float64
 	freq       int     // coupon frequency (2 or 4)
 	step       float64 // 1.0/freq
+	dayCount   string
 }
 
 // cashflow is an internal parsed cashflow with pre-computed tenor.
