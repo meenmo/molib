@@ -37,14 +37,19 @@ func ComputeKRD(in KRDInput) (KRDOutput, error) {
 	}
 
 	// Build base zero curve (no shift).
-	baseCurve, err := bootstrapZeroCurve(points, -1, 0, freq)
+	dayCount := in.DayCount
+	if dayCount == "" {
+		dayCount = "ACT/ACT"
+	}
+
+	baseCurve, err := bootstrapZeroCurve(points, -1, 0, freq, dayCount)
 	if err != nil {
 		return KRDOutput{}, err
 	}
 
 	// Phase 1: Build 2N shifted curves in parallel.
 	bumpPct := in.BumpBP / 100.0
-	shiftedCurves, err := buildShiftedCurves(points, bumpPct, freq)
+	shiftedCurves, err := buildShiftedCurves(points, bumpPct, freq, dayCount)
 	if err != nil {
 		return KRDOutput{}, err
 	}

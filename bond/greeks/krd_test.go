@@ -149,3 +149,89 @@ func TestKRD_ShiftedCurveLocalEffect(t *testing.T) {
 }
 
 var _ = fmt.Sprintf
+
+func TestKRD_ACT360_DayCount(t *testing.T) {
+	// Simple SOFR-like curve: annual freq, ACT/360
+	curve := []CurvePoint{
+		{Tenor: 1, ParYield: 3.5},
+		{Tenor: 2, ParYield: 3.6},
+		{Tenor: 3, ParYield: 3.7},
+		{Tenor: 5, ParYield: 3.8},
+		{Tenor: 10, ParYield: 4.0},
+	}
+
+	// Build zero curves with ACT/ACT and ACT/360
+	zcAA, err := bootstrapZeroCurve(curve, -1, 0, 1, "ACT/ACT")
+	if err != nil {
+		t.Fatalf("ACT/ACT bootstrap: %v", err)
+	}
+	zc360, err := bootstrapZeroCurve(curve, -1, 0, 1, "ACT/360")
+	if err != nil {
+		t.Fatalf("ACT/360 bootstrap: %v", err)
+	}
+
+	// ACT/360 should produce different (smaller) DFs because coupon accrual is larger
+	for i := range zcAA.grid {
+		tenor := zcAA.grid[i]
+		dfAA := zcAA.discounts[i]
+		df360 := zc360.discounts[i]
+		zrAA := -math.Log(dfAA) / tenor
+		zr360 := -math.Log(df360) / tenor
+
+		t.Logf("tenor=%.0fY  DF_AA=%.8f  DF_360=%.8f  ZR_AA=%.4f%%  ZR_360=%.4f%%  diff=%.2fbp",
+			tenor, dfAA, df360, zrAA*100, zr360*100, (zr360-zrAA)*10000)
+
+		// ACT/360 zero rate should be higher than ACT/ACT (by ~5/360 * rate ≈ 5bp)
+		if zr360 <= zrAA {
+			t.Errorf("tenor=%.0fY: ACT/360 zero rate (%.6f) should be > ACT/ACT (%.6f)", tenor, zr360, zrAA)
+		}
+	}
+
+	// Full KRD test with ACT/360
+	input := KRDInput{
+		ValuationDate:   "2026-04-15",
+		BumpBP:          1,
+		CouponFrequency: 1,
+		DayCount:        "ACT/360",
+		Curve:           curve,
+		Bonds: []BondInput{
+			{
+				ISIN:       "SOFR_TEST",
+				DirtyPrice: 10000,
+				Cashflows: []CFInput{
+					{Date: "2027-04-15", Amount: 400},
+					{Date: "2028-04-15", Amount: 400},
+					{Date: "2029-04-15", Amount: 400},
+					{Date: "2030-04-15", Amount: 400},
+					{Date: "2031-04-15", Amount: 10400},
+				},
+			},
+		},
+	}
+
+	out, err := ComputeKRD(input)
+	if err != nil {
+		t.Fatalf("ComputeKRD ACT/360: %v", err)
+	}
+
+	r := out.Results[0]
+	t.Logf("SOFR_TEST: base_price=%.4f eff_dur=%.6f", r.BasePrice, r.EffectiveDuration)
+
+	// Sum KRD should equal effective duration
+	sumKRD := 0.0
+	for _, d := range r.KeyRateDeltas {
+		sumKRD += d.KRD
+		if math.Abs(d.KRD) > 0.001 {
+			t.Logf("  tenor=%.0fY  krd=%.6f", d.Tenor, d.KRD)
+		}
+	}
+	diff := math.Abs(sumKRD - r.EffectiveDuration)
+	if diff > 1e-6 {
+		t.Errorf("sum(KRDs)=%.8f != eff_dur=%.8f", sumKRD, r.EffectiveDuration)
+	}
+
+	// Effective duration should be reasonable for a 5Y bond (~4-5)
+	if r.EffectiveDuration < 3 || r.EffectiveDuration > 6 {
+		t.Errorf("eff_dur=%.4f out of expected range [3,6] for 5Y bond", r.EffectiveDuration)
+	}
+}
