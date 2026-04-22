@@ -1,11 +1,11 @@
-package bond
+package ktb
 
 import (
 	"fmt"
 	"math"
 	"time"
 
-	"github.com/meenmo/molib/calendar"
+	"github.com/meenmo/molib/bond"
 )
 
 const ktbFace = 10000.0
@@ -19,132 +19,8 @@ type KTBBond struct {
 	MarketYield  float64 // 민평3사 yield in percent (e.g., 3.03)
 }
 
-// KTBFairValueInput holds the parameters for computing KTB futures fair values.
-type KTBFairValueInput struct {
-	Date    time.Time
-	CD91    float64 // CD 91-day rate in percent (e.g., 2.83)
-	Baskets []KTBBasket
-}
-
-// KTBBasket is a deliverable basket for one futures tenor.
-type KTBBasket struct {
-	Tenor int // 3, 5, 10, or 30
-	Bonds []KTBBond
-}
-
-// KTBFairValueResult is the output per tenor.
-type KTBFairValueResult struct {
-	Tenor         int
-	FairValue     float64
-	FuturesExpiry time.Time
-}
-
-// ComputeKTBFairValues computes theoretical fair values for all baskets.
-func ComputeKTBFairValues(in KTBFairValueInput) ([]KTBFairValueResult, error) {
-	cd91 := in.CD91 / 100.0
-	expiry := calendar.KTBFuturesExpiry(in.Date)
-
-	results := make([]KTBFairValueResult, 0, len(in.Baskets))
-	for _, basket := range in.Baskets {
-		fwdYields := make([]float64, 0, len(basket.Bonds))
-		for _, bond := range basket.Bonds {
-			fy, err := ktbForwardYield(in.Date, expiry, cd91, bond)
-			if err != nil {
-				return nil, fmt.Errorf("tenor %dY bond %s: %w", basket.Tenor, bond.ISIN, err)
-			}
-			fwdYields = append(fwdYields, fy)
-		}
-
-		if len(fwdYields) == 0 {
-			return nil, fmt.Errorf("tenor %dY: no bonds", basket.Tenor)
-		}
-
-		sum := 0.0
-		for _, y := range fwdYields {
-			sum += y
-		}
-		avgYield := sum / float64(len(fwdYields))
-
-		results = append(results, KTBFairValueResult{
-			Tenor:         basket.Tenor,
-			FairValue:     ktbFairValue(basket.Tenor, avgYield),
-			FuturesExpiry: expiry,
-		})
-	}
-	return results, nil
-}
-
-// ktbForwardYield implements Steps 1-5 of the KTB futures fair value algorithm.
-func ktbForwardYield(today, expiry time.Time, cd91 float64, b KTBBond) (float64, error) {
-	flows := KTBCashflows(b.IssueDate, b.MaturityDate, b.CouponRate)
-	y := b.MarketYield / 100.0
-
-	// Step 1: Spot dirty price
-	prev, next := KTBAdjacentPaymentDates(today, flows, b.IssueDate)
-	remainingToday := 0
-	for _, cf := range flows {
-		if cf.Date.After(today) { // strict: dt > today
-			remainingToday++
-		}
-	}
-	spotDirty := KTBMarketPrice(y, b.CouponRate, prev, next, today, remainingToday)
-
-	// Step 2: Coupon before futures expiry — sum coupons in (today, expiry]
-	couponBeforeExpiry := 0.0
-	couponAmt := ktbFace * (b.CouponRate / 2.0) / 100.0
-	for _, cf := range flows {
-		if cf.Date.After(today) && !cf.Date.After(expiry) {
-			couponBeforeExpiry += couponAmt
-		}
-	}
-
-	// Step 3: Clean price
-	prevExp, nextExp := KTBAdjacentPaymentDates(expiry, flows, b.IssueDate)
-	cleanPrice := spotDirty - couponBeforeExpiry
-	if couponBeforeExpiry > 0 {
-		daysUntilPymt := float64(prevExp.Sub(today).Hours() / 24)
-		couponPV := couponBeforeExpiry / (1.0 + cd91*daysUntilPymt/365.0)
-		cleanPrice = spotDirty - couponPV
-	}
-
-	// Step 4: Forward dirty price
-	daysToExpiry := float64(expiry.Sub(today).Hours() / 24)
-	fwdDirty := cleanPrice * (1.0 + cd91*daysToExpiry/365.0)
-
-	// Step 5: Solve implied yield at expiry
-	numAtExpiry := 0
-	for _, cf := range flows {
-		if !cf.Date.Before(expiry) { // inclusive: dt >= expiry
-			numAtExpiry++
-		}
-	}
-
-	impliedYield, _, err := KTBSolveImpliedYield(fwdDirty, b.CouponRate, prevExp, nextExp, expiry, numAtExpiry)
-	if err == nil {
-		return impliedYield, nil
-	}
-
-	fallback, fbErr := ktbSolveImpliedYieldBisection(fwdDirty, b.CouponRate, prevExp, nextExp, expiry, numAtExpiry)
-	if fbErr != nil {
-		return 0, fmt.Errorf("solveImpliedYield for %s: %w", b.ISIN, err)
-	}
-	return fallback, nil
-}
-
-// ktbFairValue computes the standard KTB futures theoretical price (5% coupon).
-func ktbFairValue(tenor int, avgYield float64) float64 {
-	n := 2 * tenor
-	half := 1.0 + avgYield/2.0
-	pv := 0.0
-	for i := 1; i <= n; i++ {
-		pv += 2.5 / math.Pow(half, float64(i))
-	}
-	pv += 100.0 / math.Pow(half, float64(n))
-	return pv
-}
-
 // KTBCashflows generates semiannual cashflows for a KTB bond (face=10000).
-func KTBCashflows(issue, maturity time.Time, couponRatePct float64) []Cashflow {
+func KTBCashflows(issue, maturity time.Time, couponRatePct float64) []bond.Cashflow {
 	couponAmt := ktbFace * couponRatePct / 200.0
 
 	var dates []time.Time
@@ -157,19 +33,19 @@ func KTBCashflows(issue, maturity time.Time, couponRatePct float64) []Cashflow {
 		dates = []time.Time{maturity}
 	}
 
-	flows := make([]Cashflow, len(dates))
+	flows := make([]bond.Cashflow, len(dates))
 	for i, d := range dates {
 		if i < len(dates)-1 {
-			flows[i] = Cashflow{Date: d, Coupon: couponAmt, Principal: 0}
+			flows[i] = bond.Cashflow{Date: d, Coupon: couponAmt, Principal: 0}
 		} else {
-			flows[i] = Cashflow{Date: d, Coupon: couponAmt, Principal: ktbFace}
+			flows[i] = bond.Cashflow{Date: d, Coupon: couponAmt, Principal: ktbFace}
 		}
 	}
 	return flows
 }
 
 // KTBAdjacentPaymentDates finds the previous and next coupon dates around asOf.
-func KTBAdjacentPaymentDates(asOf time.Time, flows []Cashflow, issue time.Time) (time.Time, time.Time) {
+func KTBAdjacentPaymentDates(asOf time.Time, flows []bond.Cashflow, issue time.Time) (time.Time, time.Time) {
 	if asOf.Before(flows[0].Date) {
 		return issue, flows[0].Date
 	}

@@ -1,11 +1,11 @@
-package bond_test
+package ktb_test
 
 import (
 	"math"
 	"testing"
 	"time"
 
-	"github.com/meenmo/molib/bond"
+	"github.com/meenmo/molib/bond/ktb"
 	"github.com/meenmo/molib/calendar"
 )
 
@@ -57,10 +57,33 @@ func TestKTBFuturesExpiry(t *testing.T) {
 	}
 }
 
+func TestKTBFuturesExpiryFarMonth(t *testing.T) {
+	// Far month = ThirdTuesday of the quarter 3 months after the near-month expiry.
+	// Verify against ThirdTuesday directly.
+	cases := []struct {
+		today   string
+		wantFar string
+	}{
+		// near=2026-03-17 (March), far=ThirdTuesday(June 2026)=2026-06-16
+		{"2026-03-12", calendar.ThirdTuesday(2026, time.June).Format("2006-01-02")},
+		// near=2026-06-16 (June), far=ThirdTuesday(Sep 2026)=2026-09-15
+		{"2026-03-18", calendar.ThirdTuesday(2026, time.September).Format("2006-01-02")},
+		{"2026-04-13", calendar.ThirdTuesday(2026, time.September).Format("2006-01-02")},
+		{"2026-04-01", calendar.ThirdTuesday(2026, time.September).Format("2006-01-02")},
+	}
+	for _, tc := range cases {
+		got := calendar.KTBFuturesExpiryFarMonth(mustParse(tc.today))
+		if got.Format("2006-01-02") != tc.wantFar {
+			t.Errorf("KTBFuturesExpiryFarMonth(%s) = %s, want %s",
+				tc.today, got.Format("2006-01-02"), tc.wantFar)
+		}
+	}
+}
+
 func TestKTBCashflows(t *testing.T) {
 	issue := mustParse("2024-12-10")
 	maturity := mustParse("2027-12-10")
-	flows := bond.KTBCashflows(issue, maturity, 2.875)
+	flows := ktb.KTBCashflows(issue, maturity, 2.875)
 
 	if len(flows) != 6 {
 		t.Fatalf("expected 6 cashflows, got %d", len(flows))
@@ -91,15 +114,15 @@ func TestKTBCashflows(t *testing.T) {
 func TestKTBAdjacentPaymentDates(t *testing.T) {
 	issue := mustParse("2024-12-10")
 	maturity := mustParse("2027-12-10")
-	flows := bond.KTBCashflows(issue, maturity, 2.875)
+	flows := ktb.KTBCashflows(issue, maturity, 2.875)
 
-	p1, n1 := bond.KTBAdjacentPaymentDates(mustParse("2025-01-01"), flows, issue)
+	p1, n1 := ktb.KTBAdjacentPaymentDates(mustParse("2025-01-01"), flows, issue)
 	if p1.Format("2006-01-02") != "2024-12-10" || n1.Format("2006-01-02") != "2025-06-10" {
 		t.Errorf("case1: got (%s, %s), want (2024-12-10, 2025-06-10)",
 			p1.Format("2006-01-02"), n1.Format("2006-01-02"))
 	}
 
-	p2, n2 := bond.KTBAdjacentPaymentDates(mustParse("2026-03-12"), flows, issue)
+	p2, n2 := ktb.KTBAdjacentPaymentDates(mustParse("2026-03-12"), flows, issue)
 	if p2.Format("2006-01-02") != "2025-12-10" || n2.Format("2006-01-02") != "2026-06-10" {
 		t.Errorf("case2: got (%s, %s), want (2025-12-10, 2026-06-10)",
 			p2.Format("2006-01-02"), n2.Format("2006-01-02"))
@@ -110,9 +133,9 @@ func TestKTBMarketPrice(t *testing.T) {
 	issue := mustParse("2024-12-10")
 	maturity := mustParse("2027-12-10")
 	pricingDate := mustParse("2026-03-12")
-	flows := bond.KTBCashflows(issue, maturity, 2.875)
+	flows := ktb.KTBCashflows(issue, maturity, 2.875)
 
-	prev, next := bond.KTBAdjacentPaymentDates(pricingDate, flows, issue)
+	prev, next := ktb.KTBAdjacentPaymentDates(pricingDate, flows, issue)
 	remaining := 0
 	for _, cf := range flows {
 		if cf.Date.After(pricingDate) {
@@ -120,7 +143,7 @@ func TestKTBMarketPrice(t *testing.T) {
 		}
 	}
 
-	price := bond.KTBMarketPrice(0.0303, 2.875, prev, next, pricingDate, remaining)
+	price := ktb.KTBMarketPrice(0.0303, 2.875, prev, next, pricingDate, remaining)
 	if math.Abs(price-10045.925438) > 0.01 {
 		t.Errorf("KTBMarketPrice = %.6f, want ~10045.925438", price)
 	}
@@ -130,8 +153,8 @@ func TestKTBDerivativeFiniteDiff(t *testing.T) {
 	issue := mustParse("2024-12-10")
 	maturity := mustParse("2027-12-10")
 	pricingDate := mustParse("2026-03-12")
-	flows := bond.KTBCashflows(issue, maturity, 2.875)
-	prev, next := bond.KTBAdjacentPaymentDates(pricingDate, flows, issue)
+	flows := ktb.KTBCashflows(issue, maturity, 2.875)
+	prev, next := ktb.KTBAdjacentPaymentDates(pricingDate, flows, issue)
 	remaining := 0
 	for _, cf := range flows {
 		if cf.Date.After(pricingDate) {
@@ -141,9 +164,9 @@ func TestKTBDerivativeFiniteDiff(t *testing.T) {
 
 	y := 0.0303
 	h := 1e-7
-	_, dP := bond.KTBMarketPriceAndDeriv(y, 2.875, prev, next, pricingDate, remaining)
-	pPlus := bond.KTBMarketPrice(y+h, 2.875, prev, next, pricingDate, remaining)
-	pMinus := bond.KTBMarketPrice(y-h, 2.875, prev, next, pricingDate, remaining)
+	_, dP := ktb.KTBMarketPriceAndDeriv(y, 2.875, prev, next, pricingDate, remaining)
+	pPlus := ktb.KTBMarketPrice(y+h, 2.875, prev, next, pricingDate, remaining)
+	pMinus := ktb.KTBMarketPrice(y-h, 2.875, prev, next, pricingDate, remaining)
 	finiteDiff := (pPlus - pMinus) / (2 * h)
 
 	if math.Abs(dP-finiteDiff) > 1.0 {
@@ -155,8 +178,8 @@ func TestKTBSolveImpliedYield(t *testing.T) {
 	issue := mustParse("2024-12-10")
 	maturity := mustParse("2027-12-10")
 	pricingDate := mustParse("2026-03-12")
-	flows := bond.KTBCashflows(issue, maturity, 2.875)
-	prev, next := bond.KTBAdjacentPaymentDates(pricingDate, flows, issue)
+	flows := ktb.KTBCashflows(issue, maturity, 2.875)
+	prev, next := ktb.KTBAdjacentPaymentDates(pricingDate, flows, issue)
 
 	remaining := 0
 	for _, cf := range flows {
@@ -166,9 +189,9 @@ func TestKTBSolveImpliedYield(t *testing.T) {
 	}
 
 	knownYield := 0.0303
-	price := bond.KTBMarketPrice(knownYield, 2.875, prev, next, pricingDate, remaining)
+	price := ktb.KTBMarketPrice(knownYield, 2.875, prev, next, pricingDate, remaining)
 
-	solved, iters, err := bond.KTBSolveImpliedYield(price, 2.875, prev, next, pricingDate, remaining)
+	solved, iters, err := ktb.KTBSolveImpliedYield(price, 2.875, prev, next, pricingDate, remaining)
 	if err != nil {
 		t.Fatalf("KTBSolveImpliedYield failed: %v", err)
 	}
@@ -180,24 +203,24 @@ func TestKTBSolveImpliedYield(t *testing.T) {
 }
 
 func TestComputeKTBFairValues(t *testing.T) {
-	input := bond.KTBFairValueInput{
+	input := ktb.KTBFuturesFairValueInput{
 		Date: mustParse("2026-03-12"),
 		CD91: 2.83,
-		Baskets: []bond.KTBBasket{
-			{Tenor: 3, Bonds: []bond.KTBBond{
+		Baskets: []ktb.KTBFuturesBasket{
+			{Tenor: 3, Bonds: []ktb.KTBBond{
 				{ISIN: "KR103501GEC6", IssueDate: mustParse("2024-12-10"), MaturityDate: mustParse("2027-12-10"), CouponRate: 2.875, MarketYield: 3.03},
 				{ISIN: "KR103501GF63", IssueDate: mustParse("2025-06-10"), MaturityDate: mustParse("2028-06-10"), CouponRate: 2.25, MarketYield: 3.19},
 				{ISIN: "KR103503GF95", IssueDate: mustParse("2025-09-10"), MaturityDate: mustParse("2030-09-10"), CouponRate: 2.5, MarketYield: 3.524},
 			}},
-			{Tenor: 5, Bonds: []bond.KTBBond{
+			{Tenor: 5, Bonds: []ktb.KTBBond{
 				{ISIN: "KR103503GF38", IssueDate: mustParse("2025-03-10"), MaturityDate: mustParse("2030-03-10"), CouponRate: 2.625, MarketYield: 3.467},
 				{ISIN: "KR103503GF95", IssueDate: mustParse("2025-09-10"), MaturityDate: mustParse("2030-09-10"), CouponRate: 2.5, MarketYield: 3.524},
 			}},
-			{Tenor: 10, Bonds: []bond.KTBBond{
+			{Tenor: 10, Bonds: []ktb.KTBBond{
 				{ISIN: "KR103502GEC4", IssueDate: mustParse("2024-12-10"), MaturityDate: mustParse("2034-12-10"), CouponRate: 3.0, MarketYield: 3.626},
 				{ISIN: "KR103502GF62", IssueDate: mustParse("2025-06-10"), MaturityDate: mustParse("2035-06-10"), CouponRate: 2.625, MarketYield: 3.68},
 			}},
-			{Tenor: 30, Bonds: []bond.KTBBond{
+			{Tenor: 30, Bonds: []ktb.KTBBond{
 				{ISIN: "KR103502GF39", IssueDate: mustParse("2025-03-10"), MaturityDate: mustParse("2055-03-10"), CouponRate: 2.625, MarketYield: 3.572},
 				{ISIN: "KR103502GF96", IssueDate: mustParse("2025-09-10"), MaturityDate: mustParse("2055-09-10"), CouponRate: 2.625, MarketYield: 3.565},
 			}},
@@ -211,9 +234,9 @@ func TestComputeKTBFairValues(t *testing.T) {
 		30: 126.222322,
 	}
 
-	results, err := bond.ComputeKTBFairValues(input)
+	results, err := ktb.ComputeKTBFuturesFairValues(input)
 	if err != nil {
-		t.Fatalf("ComputeKTBFairValues failed: %v", err)
+		t.Fatalf("ComputeKTBFuturesFairValues failed: %v", err)
 	}
 
 	for _, r := range results {
