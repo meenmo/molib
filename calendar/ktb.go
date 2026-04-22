@@ -16,6 +16,15 @@ func ThirdTuesday(year int, month time.Month) time.Time {
 	return t
 }
 
+// KTBFuturesExpiryFarMonth returns the second-nearest KTB futures expiry
+// (the "far month" or 원월물 expiry) — the quarterly 3rd Tuesday that is
+// 3 months after the near-month expiry.
+func KTBFuturesExpiryFarMonth(today time.Time) time.Time {
+	near := KTBFuturesExpiry(today)
+	far := near.AddDate(0, 3, 0)
+	return ThirdTuesday(far.Year(), far.Month())
+}
+
 // KTBFuturesExpiry returns the nearest KTB futures expiry date on or after today.
 // KTB futures expire on the 3rd Tuesday of Mar/Jun/Sep/Dec.
 func KTBFuturesExpiry(today time.Time) time.Time {

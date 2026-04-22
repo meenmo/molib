@@ -2,31 +2,24 @@
   "date": "2026-04-13",
   "next_business_date": "2026-04-14",
   "cd91": 2.82,
-  "futures_code": "A6566000",
+  "futures_code": "A7066000",
   "is_near_month": true,
-  "tenor": 3,
-  "market_price": 104.21,
+  "tenor": 30,
+  "market_price": 125.0,
   "bonds": [
     {
-      "isin": "KR103501GF63",
-      "issue_date": "2025-06-10",
-      "maturity_date": "2028-06-10",
-      "coupon_rate": 2.25,
-      "market_yield": 3.29
+      "isin": "KR103502GF39",
+      "issue_date": "2025-03-10",
+      "maturity_date": "2055-03-10",
+      "coupon_rate": 2.625,
+      "market_yield": 3.608
     },
     {
-      "isin": "KR103503GF95",
-      "issue_date": "2025-09-09",
-      "maturity_date": "2030-09-09",
-      "coupon_rate": 2.5,
-      "market_yield": 3.58
-    },
-    {
-      "isin": "KR103501GFC3",
-      "issue_date": "2025-12-10",
-      "maturity_date": "2028-12-10",
-      "coupon_rate": 2.75,
-      "market_yield": 3.38
+      "isin": "KR103502GF96",
+      "issue_date": "2025-09-10",
+      "maturity_date": "2055-09-10",
+      "coupon_rate": 2.625,
+      "market_yield": 3.602
     }
   ],
   "ktb_curve": [

@@ -3,3 +3,5 @@
 .vscode/
 .DS_Store
 /bondkrd
+.omc/
+docs/coding-guide.md

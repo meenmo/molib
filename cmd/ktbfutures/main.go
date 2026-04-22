@@ -10,18 +10,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/meenmo/molib/bond"
+	"github.com/meenmo/molib/bond/greeks"
+	"github.com/meenmo/molib/bond/ktb"
 )
 
 type ktbInput struct {
-	Date    string        `json:"date"`
-	CD91    float64       `json:"cd91"`
-	Baskets []basketInput `json:"baskets"`
-}
-
-type basketInput struct {
-	Tenor int         `json:"tenor"`
-	Bonds []bondInput `json:"bonds"`
+	Date             string          `json:"date"`
+	NextBusinessDate string          `json:"next_business_date"`
+	CD91             float64         `json:"cd91"`
+	FuturesCode      string          `json:"futures_code"`
+	IsNearMonth      bool            `json:"is_near_month"`
+	Tenor            int             `json:"tenor"`
+	MarketPrice      *float64        `json:"market_price,omitempty"`
+	Bonds            []bondInput     `json:"bonds"`
+	KTBCurve         []curveInput    `json:"ktb_curve"`
+	OnTheRunKTB      []onTheRunInput `json:"on_the_run_ktb,omitempty"`
 }
 
 type bondInput struct {
@@ -32,16 +35,35 @@ type bondInput struct {
 	MarketYield  float64 `json:"market_yield"`
 }
 
-type ktbOutput struct {
-	Date          string        `json:"date"`
-	FuturesExpiry string        `json:"futures_expiry"`
-	Results       []tenorResult `json:"results"`
-	Error         string        `json:"error,omitempty"`
+type curveInput struct {
+	Tenor    float64 `json:"tenor"`
+	ParYield float64 `json:"par_yield"`
 }
 
-type tenorResult struct {
-	Tenor     int     `json:"tenor"`
-	FairValue float64 `json:"fair_value"`
+type onTheRunInput struct {
+	ISIN         string  `json:"isin"`
+	MaturityDate string  `json:"maturity_date"`
+	Yield        float64 `json:"yield"`
+}
+
+type krdOut struct {
+	Tenor float64 `json:"tenor"`
+	Delta float64 `json:"delta"`
+}
+
+type ktbOutput struct {
+	Date          string   `json:"date"`
+	FuturesCode   string   `json:"futures_code"`
+	IsNearMonth   bool     `json:"is_near_month"`
+	Tenor         int      `json:"tenor"`
+	FuturesExpiry string   `json:"futures_expiry"`
+	FairValue     float64  `json:"fair_value"`
+	MarketPrice   *float64 `json:"market_price"`
+	Theta         float64  `json:"theta"`
+	Basis         *float64 `json:"basis"`
+	OnOffSpread   *float64 `json:"onoff_spread"`
+	KRD           []krdOut `json:"krd"`
+	Error         string   `json:"error,omitempty"`
 }
 
 func main() {
@@ -52,7 +74,7 @@ func main() {
 
 	if *help {
 		fmt.Fprintln(os.Stderr, "Usage: ktbfutures -input <path>")
-		fmt.Fprintln(os.Stderr, "Compute KTB futures fair value.")
+		fmt.Fprintln(os.Stderr, "Compute KTB futures fair value + greeks (theta, krd, basis, onoff_spread).")
 		return
 	}
 
@@ -80,7 +102,7 @@ func main() {
 		out, err := process(in)
 		if err != nil {
 			hadError = true
-			outputs = append(outputs, ktbOutput{Date: in.Date, Error: err.Error()})
+			outputs = append(outputs, ktbOutput{Date: in.Date, FuturesCode: in.FuturesCode, Error: err.Error()})
 			continue
 		}
 		outputs = append(outputs, *out)
@@ -104,51 +126,81 @@ func process(in ktbInput) (*ktbOutput, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse date: %w", err)
 	}
-
-	// Convert JSON input to bond package types
-	baskets := make([]bond.KTBBasket, len(in.Baskets))
-	for i, b := range in.Baskets {
-		bonds := make([]bond.KTBBond, len(b.Bonds))
-		for j, bi := range b.Bonds {
-			issue, err := time.Parse("2006-01-02", bi.IssueDate)
-			if err != nil {
-				return nil, fmt.Errorf("parse issue_date for %s: %w", bi.ISIN, err)
-			}
-			maturity, err := time.Parse("2006-01-02", bi.MaturityDate)
-			if err != nil {
-				return nil, fmt.Errorf("parse maturity_date for %s: %w", bi.ISIN, err)
-			}
-			bonds[j] = bond.KTBBond{
-				ISIN:         bi.ISIN,
-				IssueDate:    issue,
-				MaturityDate: maturity,
-				CouponRate:   bi.CouponRate,
-				MarketYield:  bi.MarketYield,
-			}
-		}
-		baskets[i] = bond.KTBBasket{Tenor: b.Tenor, Bonds: bonds}
+	nextBiz, err := time.Parse("2006-01-02", in.NextBusinessDate)
+	if err != nil {
+		return nil, fmt.Errorf("parse next_business_date: %w", err)
 	}
 
-	results, err := bond.ComputeKTBFairValues(bond.KTBFairValueInput{
-		Date:    today,
-		CD91:    in.CD91,
-		Baskets: baskets,
+	bonds := make([]ktb.KTBBond, len(in.Bonds))
+	for j, bi := range in.Bonds {
+		issue, err := time.Parse("2006-01-02", bi.IssueDate)
+		if err != nil {
+			return nil, fmt.Errorf("parse issue_date for %s: %w", bi.ISIN, err)
+		}
+		maturity, err := time.Parse("2006-01-02", bi.MaturityDate)
+		if err != nil {
+			return nil, fmt.Errorf("parse maturity_date for %s: %w", bi.ISIN, err)
+		}
+		bonds[j] = ktb.KTBBond{
+			ISIN:         bi.ISIN,
+			IssueDate:    issue,
+			MaturityDate: maturity,
+			CouponRate:   bi.CouponRate,
+			MarketYield:  bi.MarketYield,
+		}
+	}
+
+	curvePts := make([]greeks.CurvePoint, len(in.KTBCurve))
+	for i, p := range in.KTBCurve {
+		curvePts[i] = greeks.CurvePoint{Tenor: p.Tenor, ParYield: p.ParYield}
+	}
+
+	var onRun []greeks.OnTheRunBond
+	if len(in.OnTheRunKTB) > 0 {
+		onRun = make([]greeks.OnTheRunBond, len(in.OnTheRunKTB))
+		for i, o := range in.OnTheRunKTB {
+			mat, err := time.Parse("2006-01-02", o.MaturityDate)
+			if err != nil {
+				return nil, fmt.Errorf("parse on_the_run_ktb maturity_date for %s: %w", o.ISIN, err)
+			}
+			onRun[i] = greeks.OnTheRunBond{ISIN: o.ISIN, MaturityDate: mat, Yield: o.Yield}
+		}
+	}
+
+	result, err := greeks.ComputeKTBGreeks(greeks.KTBGreeksInput{
+		Date:             today,
+		NextBusinessDate: nextBiz,
+		CD91:             in.CD91,
+		FuturesCode:      in.FuturesCode,
+		IsNearMonth:      in.IsNearMonth,
+		Tenor:            in.Tenor,
+		MarketPrice:      in.MarketPrice,
+		Bonds:            bonds,
+		KTBCurve:         curvePts,
+		OnTheRunKTB:      onRun,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	out := &ktbOutput{Date: in.Date}
-	for _, r := range results {
-		if out.FuturesExpiry == "" {
-			out.FuturesExpiry = r.FuturesExpiry.Format("2006-01-02")
-		}
-		out.Results = append(out.Results, tenorResult{
-			Tenor:     r.Tenor,
-			FairValue: r.FairValue,
-		})
+	krd := make([]krdOut, len(result.KRD))
+	for i, k := range result.KRD {
+		krd[i] = krdOut{Tenor: k.Tenor, Delta: k.Delta}
 	}
-	return out, nil
+
+	return &ktbOutput{
+		Date:          in.Date,
+		FuturesCode:   result.FuturesCode,
+		IsNearMonth:   result.IsNearMonth,
+		Tenor:         result.Tenor,
+		FuturesExpiry: result.FuturesExpiry.Format("2006-01-02"),
+		FairValue:     result.FairValue,
+		MarketPrice:   result.MarketPrice,
+		Theta:         result.Theta,
+		Basis:         result.Basis,
+		OnOffSpread:   result.OnOffSpread,
+		KRD:           krd,
+	}, nil
 }
 
 func readInput(path string) ([]byte, error) {
