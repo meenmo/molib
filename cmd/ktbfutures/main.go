@@ -15,14 +15,14 @@ import (
 )
 
 type ktbInput struct {
-	Date             string          `json:"date"`
+	Today            string          `json:"today"`
 	NextBusinessDate string          `json:"next_business_date"`
-	CD91             float64         `json:"cd91"`
+	ShortTermRate    float64         `json:"short_term_rate"`
 	FuturesCode      string          `json:"futures_code"`
 	IsNearMonth      bool            `json:"is_near_month"`
 	Tenor            int             `json:"tenor"`
 	MarketPrice      *float64        `json:"market_price,omitempty"`
-	Bonds            []bondInput     `json:"bonds"`
+	Basket           []bondInput     `json:"basket"`
 	KTBCurve         []curveInput    `json:"ktb_curve"`
 	OnTheRunKTB      []onTheRunInput `json:"on_the_run_ktb,omitempty"`
 }
@@ -32,12 +32,12 @@ type bondInput struct {
 	IssueDate    string  `json:"issue_date"`
 	MaturityDate string  `json:"maturity_date"`
 	CouponRate   float64 `json:"coupon_rate"`
-	MarketYield  float64 `json:"market_yield"`
+	Yield        float64 `json:"yield"`
 }
 
 type curveInput struct {
-	Tenor    float64 `json:"tenor"`
-	ParYield float64 `json:"par_yield"`
+	Tenor float64 `json:"tenor"`
+	Yield float64 `json:"yield"`
 }
 
 type onTheRunInput struct {
@@ -102,7 +102,7 @@ func main() {
 		out, err := process(in)
 		if err != nil {
 			hadError = true
-			outputs = append(outputs, ktbOutput{Date: in.Date, FuturesCode: in.FuturesCode, Error: err.Error()})
+			outputs = append(outputs, ktbOutput{Date: in.Today, FuturesCode: in.FuturesCode, Error: err.Error()})
 			continue
 		}
 		outputs = append(outputs, *out)
@@ -122,17 +122,17 @@ func main() {
 }
 
 func process(in ktbInput) (*ktbOutput, error) {
-	today, err := time.Parse("2006-01-02", in.Date)
+	today, err := time.Parse("2006-01-02", in.Today)
 	if err != nil {
-		return nil, fmt.Errorf("parse date: %w", err)
+		return nil, fmt.Errorf("parse today: %w", err)
 	}
 	nextBiz, err := time.Parse("2006-01-02", in.NextBusinessDate)
 	if err != nil {
 		return nil, fmt.Errorf("parse next_business_date: %w", err)
 	}
 
-	bonds := make([]ktb.KTBBond, len(in.Bonds))
-	for j, bi := range in.Bonds {
+	bonds := make([]ktb.KTBBond, len(in.Basket))
+	for j, bi := range in.Basket {
 		issue, err := time.Parse("2006-01-02", bi.IssueDate)
 		if err != nil {
 			return nil, fmt.Errorf("parse issue_date for %s: %w", bi.ISIN, err)
@@ -146,13 +146,13 @@ func process(in ktbInput) (*ktbOutput, error) {
 			IssueDate:    issue,
 			MaturityDate: maturity,
 			CouponRate:   bi.CouponRate,
-			MarketYield:  bi.MarketYield,
+			MarketYield:  bi.Yield,
 		}
 	}
 
 	curvePts := make([]greeks.CurvePoint, len(in.KTBCurve))
 	for i, p := range in.KTBCurve {
-		curvePts[i] = greeks.CurvePoint{Tenor: p.Tenor, ParYield: p.ParYield}
+		curvePts[i] = greeks.CurvePoint{Tenor: p.Tenor, ParYield: p.Yield}
 	}
 
 	var onRun []greeks.OnTheRunBond
@@ -170,7 +170,7 @@ func process(in ktbInput) (*ktbOutput, error) {
 	result, err := greeks.ComputeKTBGreeks(greeks.KTBGreeksInput{
 		Date:             today,
 		NextBusinessDate: nextBiz,
-		CD91:             in.CD91,
+		CD91:             in.ShortTermRate,
 		FuturesCode:      in.FuturesCode,
 		IsNearMonth:      in.IsNearMonth,
 		Tenor:            in.Tenor,
@@ -189,7 +189,7 @@ func process(in ktbInput) (*ktbOutput, error) {
 	}
 
 	return &ktbOutput{
-		Date:          in.Date,
+		Date:          in.Today,
 		FuturesCode:   result.FuturesCode,
 		IsNearMonth:   result.IsNearMonth,
 		Tenor:         result.Tenor,
