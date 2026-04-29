@@ -56,6 +56,34 @@ func (irs InterestRateSwap) legCashflows(curve *Curve) (map[time.Time]float64, m
 			prevPayDate = payDate
 		}
 	}
+
+	// Back stub: when termination falls between regular coupon dates the loop
+	// stops one regular coupon short. Emit a final modified-following stub
+	// from the last reset (or, if none was reached after settlement, from
+	// the prior coupon date) to the adjusted termination.
+	stubPay := calendar.Adjust(calendar.KR, termination)
+	if isFirst {
+		if stubPay.After(settlement) {
+			prevPayDate = priorPaymentDate(settlement, effective)
+			refRate, ok := irs.ReferenceIndex.RateOn(calendar.AddBusinessDays(calendar.KR, prevPayDate, -1))
+			if !ok {
+				panic("missing reference rate fixing for first period")
+			}
+			floatRate = refRate / 100
+
+			dayCountFrac := utils.Days(prevPayDate, stubPay) / 365
+			fixed[stubPay] = (irs.FixedRate / 100) * irs.Notional * dayCountFrac
+			floating[stubPay] = floatRate * irs.Notional * dayCountFrac
+		}
+	} else if prevPayDate.Before(stubPay) {
+		df = utils.RoundTo(math.Exp(-(utils.Days(settlement, stubPay)/365)*(curve.ZeroRateAt(stubPay)/100)), 12)
+		floatRate = ((prevDf / df) - 1) / (utils.Days(prevPayDate, stubPay) / 365)
+
+		dayCountFrac := utils.Days(prevPayDate, stubPay) / 365
+		fixed[stubPay] = (irs.FixedRate / 100) * irs.Notional * dayCountFrac
+		floating[stubPay] = floatRate * irs.Notional * dayCountFrac
+	}
+
 	return fixed, floating
 }
 

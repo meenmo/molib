@@ -31,10 +31,17 @@ func BootstrapCurve(settlementDate string, quotes ParSwapQuotes) *Curve {
 }
 
 func (crv Curve) generatePaymentDates() []time.Time {
+	isEOM := calendar.IsEndOfMonth(calendar.KR, crv.settlementDate)
 	dates := make([]time.Time, 0, 81)
 	for i := 0; i <= 80; i++ {
-		paymentDate := crv.settlementDate.AddDate(0, 3*i, 0)
-		dates = append(dates, calendar.Adjust(calendar.KR, paymentDate))
+		raw := calendar.AddMonth(crv.settlementDate, 3*i)
+		var d time.Time
+		if isEOM {
+			d = calendar.LastBusinessDayOfMonth(calendar.KR, raw)
+		} else {
+			d = calendar.Adjust(calendar.KR, raw)
+		}
+		dates = append(dates, d)
 	}
 	return dates
 }
