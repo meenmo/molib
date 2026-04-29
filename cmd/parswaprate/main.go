@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/meenmo/molib/calendar"
@@ -128,19 +130,43 @@ func main() {
 		return
 	}
 
+	// Trades are independent: fan out across CPUs, write into a pre-sized
+	// slice indexed by input position so output order matches input order.
+	outputs := make([]PricingOutput, len(inputs))
+	workers := runtime.NumCPU()
+	if workers > len(inputs) {
+		workers = len(inputs)
+	}
+
+	jobs := make(chan int, len(inputs))
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range jobs {
+				in := inputs[i]
+				out, err := calculateParRate(in)
+				if err != nil {
+					outputs[i] = PricingOutput{TaskID: in.TaskID, Error: err.Error()}
+					continue
+				}
+				outputs[i] = *out
+			}
+		}()
+	}
+	for i := range inputs {
+		jobs <- i
+	}
+	close(jobs)
+	wg.Wait()
+
 	hadError := false
-	outputs := make([]PricingOutput, 0, len(inputs))
-	for _, in := range inputs {
-		out, err := calculateParRate(in)
-		if err != nil {
+	for _, o := range outputs {
+		if o.Error != "" {
 			hadError = true
-			outputs = append(outputs, PricingOutput{
-				TaskID: in.TaskID,
-				Error:  err.Error(),
-			})
-			continue
+			break
 		}
-		outputs = append(outputs, *out)
 	}
 
 	if isArray {
