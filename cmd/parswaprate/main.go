@@ -34,6 +34,21 @@ type PricingInput struct {
 	CurveQuotes         map[string]float64 `json:"curve_quotes"`
 	CurveSource       string             `json:"curve_source,omitempty"`
 
+	// DiscountQuotes optionally supplies a SEPARATE discount curve (par
+	// quotes keyed by tenor). When omitted, the engine self-discounts
+	// using CurveQuotes — appropriate for OIS-only indices (TONAR/ESTR/
+	// SOFR/SONIA) where the projection and discount curves coincide.
+	// For HIBOR3M, supply a HKD OIS curve here (HONIA front-end spliced
+	// with HIBOR3M IRS for ≥2Y, matching BBG ICVS 145 construction).
+	DiscountQuotes map[string]float64 `json:"discount_quotes,omitempty"`
+
+	// FirstResetPct optionally pins the floating leg's first-period rate
+	// to an observed IBOR fixing (in percent) — the same value Bloomberg
+	// SWPM displays as "Latest Index". When omitted, the engine implies
+	// the first reset from the projection curve (which is generally
+	// inaccurate when the curve has no sub-1Y nodes).
+	FirstResetPct *float64 `json:"first_reset_pct,omitempty"`
+
 	// ReferenceRateFixings is required for CD91D when the first floating
 	// period's reset date precedes the trade date. Maps "YYYY-MM-DD" to
 	// the fixing in percent.
@@ -92,6 +107,15 @@ var oisPresets = map[string]OISPreset{
 		FixedLeg: swaps.SONIAFixed,
 		FloatLeg: func() market.LegConvention {
 			l := swaps.SONIAFloating
+			l.IncludeInitialPrincipal = false
+			l.IncludeFinalPrincipal = false
+			return l
+		}(),
+	},
+	"HIBOR3M": {
+		FixedLeg: swaps.HIBOR3MFixed,
+		FloatLeg: func() market.LegConvention {
+			l := swaps.HIBOR3MFloating
 			l.IncludeInitialPrincipal = false
 			l.IncludeFinalPrincipal = false
 			return l
@@ -187,9 +211,25 @@ func usage() {
 	fmt.Println("  parswaprate < input.json")
 	fmt.Println("  parswaprate -input /path/to/input.json")
 	fmt.Println()
-	fmt.Println("Read JSON input, calculate OIS par swap rate, output JSON to stdout.")
+	fmt.Println("Read JSON input, calculate par swap rate, output JSON to stdout.")
+	fmt.Println("Supported floating_rate_index: TONAR, ESTR, SOFR, SONIA, HIBOR3M, CD91D.")
 	fmt.Println()
-	fmt.Println("Example input:")
+	fmt.Println("Common fields:")
+	fmt.Println(`  curve_date, trade_date, effective_date, maturity_date  (YYYY-MM-DD)`)
+	fmt.Println(`  forward_tenor, swap_tenor                              (int years; alternative to dates)`)
+	fmt.Println(`  notional                                               (float)`)
+	fmt.Println(`  floating_rate_index                                    (string)`)
+	fmt.Println(`  curve_quotes                                           (tenor -> par-rate %, projection curve)`)
+	fmt.Println()
+	fmt.Println("Optional advanced fields:")
+	fmt.Println(`  discount_quotes        Separate discount-curve par quotes (dual-curve mode).`)
+	fmt.Println(`                         When omitted, the engine self-discounts on curve_quotes.`)
+	fmt.Println(`  first_reset_pct        OIS/IBOR observed first-period fixing in %`)
+	fmt.Println(`                         (e.g. 3M HIBOR cash for HIBOR3M IRS).`)
+	fmt.Println(`                         Maps to Bloomberg SWPM "Latest Index".`)
+	fmt.Println(`  reference_rate_fixings Date-keyed CD91 fixings (YYYY-MM-DD -> %) for CD91D path.`)
+	fmt.Println()
+	fmt.Println("Example input (vanilla OIS):")
 	fmt.Println(`  {`)
 	fmt.Println(`    "curve_date": "2026-01-09",`)
 	fmt.Println(`    "trade_date": "2026-01-09",`)
@@ -239,6 +279,18 @@ func writeError(msg string) {
 	os.Exit(1)
 }
 
+// discountQuotes returns the par quotes used to bootstrap the discount curve.
+// When input.DiscountQuotes is supplied, it takes precedence (dual-curve
+// pricing — projection on CurveQuotes, discount on DiscountQuotes). Otherwise
+// the discount falls back to CurveQuotes for self-discounted single-curve
+// pricing.
+func discountQuotes(input PricingInput) map[string]float64 {
+	if len(input.DiscountQuotes) > 0 {
+		return input.DiscountQuotes
+	}
+	return input.CurveQuotes
+}
+
 func calculateParRate(input PricingInput) (*PricingOutput, error) {
 	switch strings.ToUpper(strings.TrimSpace(input.FloatingRateIndex)) {
 	case "CD91", "CD91D":
@@ -257,7 +309,7 @@ func calculateParRate(input PricingInput) (*PricingOutput, error) {
 
 	preset, ok := oisPresets[input.FloatingRateIndex]
 	if !ok {
-		return nil, fmt.Errorf("unknown floating_rate_index: %s (must be TONAR, ESTR, SOFR, SONIA, or CD91D)", input.FloatingRateIndex)
+		return nil, fmt.Errorf("unknown floating_rate_index: %s (must be TONAR, ESTR, SOFR, SONIA, HIBOR3M, or CD91D)", input.FloatingRateIndex)
 	}
 
 	if input.CurveQuotes == nil || len(input.CurveQuotes) == 0 {
@@ -283,12 +335,13 @@ func calculateParRate(input PricingInput) (*PricingOutput, error) {
 		CurveDate:      curveDate,
 		TradeDate:      tradeDate,
 		ValuationDate:  tradeDate,
-		Notional:       input.Notional,
-		PayLeg:         preset.FixedLeg,
-		RecLeg:         preset.FloatLeg,
-		DiscountingOIS: preset.FloatLeg,
-		OISQuotes:      input.CurveQuotes,
-		RecLegQuotes:   input.CurveQuotes,
+		Notional:            input.Notional,
+		PayLeg:              preset.FixedLeg,
+		RecLeg:              preset.FloatLeg,
+		DiscountingOIS:      preset.FloatLeg,
+		OISQuotes:           discountQuotes(input),
+		RecLegQuotes:        input.CurveQuotes,
+		RecLegFirstResetPct: input.FirstResetPct,
 	}
 
 	if hasExplicitDates {
