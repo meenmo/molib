@@ -308,6 +308,13 @@ func legPV(
 		signCoupon = -1.0
 	}
 
+	var firstResetOverride *float64
+	if isPayLeg {
+		firstResetOverride = spec.PayLegFirstResetPct
+	} else {
+		firstResetOverride = spec.RecLegFirstResetPct
+	}
+
 	totalPV := 0.0
 	for _, p := range periods {
 		if p.PayDate.Before(valuationDate) {
@@ -318,7 +325,11 @@ func legPV(
 
 		base := 0.0
 		if leg.LegType == market.LegFloating {
-			base = forwardRate(projCurve, p.StartDate, p.EndDate, string(leg.DayCount))
+			if firstResetOverride != nil && p.StartDate.Equal(spec.EffectiveDate) {
+				base = *firstResetOverride / 100.0
+			} else {
+				base = forwardRate(projCurve, p.StartDate, p.EndDate, string(leg.DayCount))
+			}
 		}
 		rate := base + spread
 
