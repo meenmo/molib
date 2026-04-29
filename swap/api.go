@@ -82,6 +82,14 @@ type InterestRateSwapParams struct {
 	// Spreads (in bp). For fixed legs, spread is interpreted as the fixed coupon in bp.
 	PayLegSpreadBP float64
 	RecLegSpreadBP float64
+
+	// First-period reset overrides (in percent). When non-nil, the engine
+	// uses this rate for the leg's first floating period instead of the
+	// curve-implied forward. Used to feed in the observed IBOR fixing
+	// (e.g., HIBOR3M cash fixing for a spot-start trade) — matches
+	// Bloomberg SWPM's "Latest Index".
+	PayLegFirstResetPct *float64
+	RecLegFirstResetPct *float64
 }
 
 // SwapTrade is a fully specified swap trade paired with valuation curves.
@@ -216,14 +224,16 @@ func InterestRateSwap(params InterestRateSwapParams) (*SwapTrade, error) {
 	}
 
 	spec := market.SwapSpec{
-		Notional:       params.Notional,
-		EffectiveDate:  effective,
-		MaturityDate:   maturity,
-		PayLeg:         params.PayLeg,
-		RecLeg:         params.RecLeg,
-		DiscountingOIS: params.DiscountingOIS,
-		PayLegSpreadBP: params.PayLegSpreadBP,
-		RecLegSpreadBP: params.RecLegSpreadBP,
+		Notional:            params.Notional,
+		EffectiveDate:       effective,
+		MaturityDate:        maturity,
+		PayLeg:              params.PayLeg,
+		RecLeg:              params.RecLeg,
+		DiscountingOIS:      params.DiscountingOIS,
+		PayLegSpreadBP:      params.PayLegSpreadBP,
+		RecLegSpreadBP:      params.RecLegSpreadBP,
+		PayLegFirstResetPct: params.PayLegFirstResetPct,
+		RecLegFirstResetPct: params.RecLegFirstResetPct,
 	}
 
 	// Detect OIS basis swap: both legs are overnight rates with the same reference index

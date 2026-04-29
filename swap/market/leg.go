@@ -97,4 +97,11 @@ type SwapSpec struct {
 	DiscountingOIS LegConvention
 	PayLegSpreadBP float64
 	RecLegSpreadBP float64
+
+	// First-period reset overrides (in percent). When non-nil, the engine
+	// uses this rate for the leg's first period (the one starting at
+	// EffectiveDate) instead of deriving it from the projection curve.
+	// Maps to Bloomberg SWPM's "Latest Index" field.
+	PayLegFirstResetPct *float64
+	RecLegFirstResetPct *float64
 }

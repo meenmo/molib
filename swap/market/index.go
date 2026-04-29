@@ -9,6 +9,7 @@ const (
 	EURIBOR6M ReferenceIndex = "EURIBOR6M"
 	TONAR     ReferenceIndex = "TONAR"
 	SONIA     ReferenceIndex = "SONIA"
+	HIBOR3M   ReferenceIndex = "HIBOR3M"
 	TIBOR3M   ReferenceIndex = "TIBOR3M"
 	TIBOR6M   ReferenceIndex = "TIBOR6M"
 	SOFR      ReferenceIndex = "SOFR"

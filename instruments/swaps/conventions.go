@@ -234,6 +234,35 @@ var (
 		IncludeFinalPrincipal:   true,
 	}
 
+	HIBOR3MFloating = market.LegConvention{
+		LegType:                 market.LegFloating,
+		ReferenceIndex:          market.HIBOR3M,
+		DayCount:                market.Act365F,
+		ResetFrequency:          market.FreqQuarterly,
+		PayFrequency:            market.FreqQuarterly,
+		FixingLagDays:           0,
+		PayDelayDays:            0,
+		BusinessDayAdjustment:   market.ModifiedFollowing,
+		RollConvention:          market.BackwardEOM,
+		Calendar:                calendar.HK,
+		ResetPosition:           market.ResetInAdvance,
+		IncludeInitialPrincipal: true,
+		IncludeFinalPrincipal:   true,
+		ScheduleDirection:       market.ScheduleBackward,
+	}
+
+	HIBOR3MFixed = market.LegConvention{
+		LegType:               market.LegFixed,
+		DayCount:              market.Act365F,
+		PayFrequency:          market.FreqQuarterly,
+		FixingLagDays:         0,
+		PayDelayDays:          0,
+		BusinessDayAdjustment: market.ModifiedFollowing,
+		RollConvention:        market.BackwardEOM,
+		Calendar:              calendar.HK,
+		ScheduleDirection:     market.ScheduleBackward,
+	}
+
 	KRXCD91DFixed = market.LegConvention{
 		LegType:               market.LegFixed,
 		DayCount:              market.Act365F,

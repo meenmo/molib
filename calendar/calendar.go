@@ -12,6 +12,7 @@ const (
 	GT     CalendarID = "GT" // US Government bond calendar
 	KR     CalendarID = "KOR"
 	EN     CalendarID = "EN"
+	HK     CalendarID = "HK"
 )
 
 // buildHolidayMap creates a holiday lookup map from a list of date strings.
@@ -32,6 +33,7 @@ var fdHolidays = map[string]struct{}{}
 var gtHolidays = map[string]struct{}{}
 var enHolidays = map[string]struct{}{}
 var krHolidays = buildHolidayMap(krHolidayList)
+var hkHolidays map[string]struct{} // populated in hongkong.go init()
 
 func isHoliday(cal CalendarID, t time.Time) bool {
 	key := t.Format("2006-01-02")
@@ -53,6 +55,9 @@ func isHoliday(cal CalendarID, t time.Time) bool {
 		return ok
 	case KR:
 		_, ok := krHolidays[key]
+		return ok
+	case HK:
+		_, ok := hkHolidays[key]
 		return ok
 	default:
 		return false

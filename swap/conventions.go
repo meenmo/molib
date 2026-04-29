@@ -57,6 +57,18 @@ func GetDayCountConvention(cal calendar.CalendarID) DayCountConvention {
 			FixedFreqMonths: 3,
 		}
 
+	case calendar.HK:
+		// HKD HIBOR3M IRS conventions:
+		// - IBOR (HIBOR): ACT/365F
+		// - Fixed: ACT/365F, quarterly
+		// - Self-discounted on HIBOR3M (no liquid HKD OIS curve).
+		return DayCountConvention{
+			OIS:             "ACT/365F",
+			FloatIBOR:       "ACT/365F",
+			FixedIBOR:       "ACT/365F",
+			FixedFreqMonths: 3,
+		}
+
 	default:
 		// Default to JPY-like conventions
 		return DayCountConvention{
