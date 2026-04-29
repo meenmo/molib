@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/meenmo/molib/calendar"
@@ -127,7 +126,7 @@ func calculateNPV(input PricingInput) (*PricingOutput, error) {
 
 	quotes := make(krx.ParSwapQuotes, len(input.CurveQuotes))
 	for _, q := range input.CurveQuotes {
-		tenorYears, err := krxTenorToYears(q.Tenor)
+		tenorYears, err := krx.TenorToYears(q.Tenor)
 		if err != nil {
 			return nil, fmt.Errorf("parse tenor %q: %w", q.Tenor, err)
 		}
@@ -179,44 +178,3 @@ func safePrice(trade krx.InterestRateSwap, curve *krx.Curve) (fixedPV, floatPV, 
 	return fixedPV, floatPV, npv, nil
 }
 
-func krxTenorToYears(value string) (float64, error) {
-	t := strings.ToUpper(strings.TrimSpace(value))
-	if t == "" {
-		return 0, fmt.Errorf("empty tenor")
-	}
-
-	// Common KRX short-end aliases.
-	if t == "1D" {
-		return 0, nil
-	}
-
-	parseNum := func(s string) (float64, error) {
-		return strconv.ParseFloat(s, 64)
-	}
-
-	switch {
-	case strings.HasSuffix(t, "Y"):
-		return parseNum(strings.TrimSuffix(t, "Y"))
-	case strings.HasSuffix(t, "M"):
-		n, err := parseNum(strings.TrimSuffix(t, "M"))
-		if err != nil {
-			return 0, err
-		}
-		return n / 12.0, nil
-	case strings.HasSuffix(t, "D"):
-		n, err := parseNum(strings.TrimSuffix(t, "D"))
-		if err != nil {
-			return 0, err
-		}
-		// 91D is quoted as the 3M (0.25Y) node in KRX CD IRS curves.
-		if n == 91 {
-			return 0.25, nil
-		}
-		if n == 1 {
-			return 0, nil
-		}
-		return n / 365.0, nil
-	default:
-		return parseNum(t)
-	}
-}
