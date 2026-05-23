@@ -120,8 +120,8 @@ func NewCurveFromDFs(settlement time.Time, dfs map[time.Time]float64, cal calend
 	utils.SortDates(inputDates)
 
 	if freqMonths > 0 {
-		// Expand to regular grid and interpolate DFs.
-		c.paymentDates = c.generatePaymentDates()
+		// Expand to a regular grid through the last supplied DF node and interpolate DFs.
+		c.paymentDates = c.generatePaymentDatesUntil(inputDates[len(inputDates)-1])
 		for _, d := range c.paymentDates {
 			if _, ok := c.discountFactors[d]; !ok {
 				c.discountFactors[d] = c.interpolateDF(d, inputDates, dfs)
@@ -172,6 +172,19 @@ func (c *Curve) generatePaymentDates() []time.Time {
 	for i := 0; i <= numDates; i++ {
 		t := c.settlement.AddDate(0, c.freqMonths*i, 0)
 		dates = append(dates, calendar.Adjust(c.cal, t))
+	}
+	return dates
+}
+
+func (c *Curve) generatePaymentDatesUntil(lastDate time.Time) []time.Time {
+	dates := []time.Time{}
+	for i := 0; ; i++ {
+		t := c.settlement.AddDate(0, c.freqMonths*i, 0)
+		d := calendar.Adjust(c.cal, t)
+		dates = append(dates, d)
+		if !d.Before(lastDate) {
+			break
+		}
 	}
 	return dates
 }
@@ -849,6 +862,21 @@ func (c *Curve) Settlement() time.Time {
 // DayCount returns the curve's day count convention.
 func (c *Curve) DayCount() string {
 	return c.curveDayCount
+}
+
+// ImpliedParRatePct returns the fixed par rate, in percent, implied by the
+// curve's discount factors and the same fixed-leg conventions used during
+// bootstrap.
+func (c *Curve) ImpliedParRatePct(maturity time.Time) float64 {
+	coupons := c.buildOISCoupons(maturity)
+	annuity := 0.0
+	for _, cpn := range coupons {
+		annuity += cpn.Accrual * c.DF(cpn.PaymentDate)
+	}
+	if annuity == 0 {
+		return math.NaN()
+	}
+	return (1.0 - c.DF(maturity)) / annuity * 100.0
 }
 
 // PillarDFs returns all bootstrapped discount factors keyed by date.
