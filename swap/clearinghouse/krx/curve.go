@@ -118,6 +118,30 @@ func (crv Curve) ZeroRateAt(pymtDate time.Time) float64 {
 	return utils.RoundTo(r1+(r2-r1)*utils.Days(d1, pymtDate)/utils.Days(d1, d2), 12)
 }
 
+// ImpliedParRatePct returns the quarterly fixed par rate, in percent, implied
+// by the curve's discount factors through the supplied maturity date.
+func (crv Curve) ImpliedParRatePct(maturity time.Time) float64 {
+	annuity := 0.0
+	prev := crv.settlementDate
+	for _, d := range crv.paymentDates[1:] {
+		if d.After(maturity) {
+			break
+		}
+		annuity += utils.Days(prev, d) / 365 * crv.DF(d)
+		prev = d
+		if d.Equal(maturity) {
+			break
+		}
+	}
+	if prev.Before(maturity) {
+		annuity += utils.Days(prev, maturity) / 365 * crv.DF(maturity)
+	}
+	if annuity == 0 {
+		return math.NaN()
+	}
+	return (1.0 - crv.DF(maturity)) / annuity * 100.0
+}
+
 // DF returns the discount factor at pymtDate using the curve's zero-rate interpolation.
 func (crv Curve) DF(pymtDate time.Time) float64 {
 	z := crv.ZeroRateAt(pymtDate)
