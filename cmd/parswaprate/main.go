@@ -31,7 +31,7 @@ type PricingInput struct {
 	MaturityDate      string             `json:"maturity_date,omitempty"`
 	Notional          float64            `json:"notional"`
 	FloatingRateIndex string             `json:"floating_rate_index"`
-	CurveQuotes         map[string]float64 `json:"curve_quotes"`
+	CurveQuotes       map[string]float64 `json:"curve_quotes"`
 	CurveSource       string             `json:"curve_source,omitempty"`
 
 	// DiscountQuotes optionally supplies a SEPARATE discount curve (par
@@ -67,60 +67,14 @@ type PricingOutput struct {
 	Error         string  `json:"error,omitempty"`
 }
 
-// OISPreset groups fixed and floating leg conventions for an OIS swap.
-type OISPreset struct {
-	FixedLeg market.LegConvention
-	FloatLeg market.LegConvention
-}
-
-// oisPresets maps OIS index names to their leg conventions.
-// Floating legs have principal exchange disabled for standard OIS par rate calculation.
-var oisPresets = map[string]OISPreset{
-	"TONAR": {
-		FixedLeg: swaps.TONARFixed,
-		FloatLeg: func() market.LegConvention {
-			l := swaps.TONARFloating
-			l.IncludeInitialPrincipal = false
-			l.IncludeFinalPrincipal = false
-			return l
-		}(),
-	},
-	"ESTR": {
-		FixedLeg: swaps.ESTRFixed,
-		FloatLeg: func() market.LegConvention {
-			l := swaps.ESTRFloating
-			l.IncludeInitialPrincipal = false
-			l.IncludeFinalPrincipal = false
-			return l
-		}(),
-	},
-	"SOFR": {
-		FixedLeg: swaps.SOFRFixed,
-		FloatLeg: func() market.LegConvention {
-			l := swaps.SOFRFloating
-			l.IncludeInitialPrincipal = false
-			l.IncludeFinalPrincipal = false
-			return l
-		}(),
-	},
-	"SONIA": {
-		FixedLeg: swaps.SONIAFixed,
-		FloatLeg: func() market.LegConvention {
-			l := swaps.SONIAFloating
-			l.IncludeInitialPrincipal = false
-			l.IncludeFinalPrincipal = false
-			return l
-		}(),
-	},
-	"HIBOR3M": {
-		FixedLeg: swaps.HIBOR3MFixed,
-		FloatLeg: func() market.LegConvention {
-			l := swaps.HIBOR3MFloating
-			l.IncludeInitialPrincipal = false
-			l.IncludeFinalPrincipal = false
-			return l
-		}(),
-	},
+func parRateLegs(index string) (market.LegConvention, market.LegConvention, bool) {
+	fixed, floating, ok := swaps.FixedFloatLegsByIndex(index)
+	if !ok {
+		return market.LegConvention{}, market.LegConvention{}, false
+	}
+	floating.IncludeInitialPrincipal = false
+	floating.IncludeFinalPrincipal = false
+	return fixed, floating, true
 }
 
 func main() {
@@ -307,9 +261,9 @@ func calculateParRate(input PricingInput) (*PricingOutput, error) {
 		return nil, fmt.Errorf("invalid trade_date: %v", err)
 	}
 
-	preset, ok := oisPresets[input.FloatingRateIndex]
+	fixedLeg, floatLeg, ok := parRateLegs(input.FloatingRateIndex)
 	if !ok {
-		return nil, fmt.Errorf("unknown floating_rate_index: %s (must be TONAR, ESTR, SOFR, SONIA, HIBOR3M, or CD91D)", input.FloatingRateIndex)
+		return nil, fmt.Errorf("unknown floating_rate_index: %s (must be TONAR, ESTR, SOFR, SONIA, HIBOR3M, EURIBOR3M, EURIBOR6M, or CD91D)", input.FloatingRateIndex)
 	}
 
 	if input.CurveQuotes == nil || len(input.CurveQuotes) == 0 {
@@ -330,15 +284,15 @@ func calculateParRate(input PricingInput) (*PricingOutput, error) {
 	}
 
 	params := swap.InterestRateSwapParams{
-		DataSource:     swap.DataSourceBGN,
-		ClearingHouse:  swap.ClearingHouseOTC,
-		CurveDate:      curveDate,
-		TradeDate:      tradeDate,
-		ValuationDate:  tradeDate,
+		DataSource:          swap.DataSourceBGN,
+		ClearingHouse:       swap.ClearingHouseOTC,
+		CurveDate:           curveDate,
+		TradeDate:           tradeDate,
+		ValuationDate:       tradeDate,
 		Notional:            input.Notional,
-		PayLeg:              preset.FixedLeg,
-		RecLeg:              preset.FloatLeg,
-		DiscountingOIS:      preset.FloatLeg,
+		PayLeg:              fixedLeg,
+		RecLeg:              floatLeg,
+		DiscountingOIS:      floatLeg,
 		OISQuotes:           discountQuotes(input),
 		RecLegQuotes:        input.CurveQuotes,
 		RecLegFirstResetPct: input.FirstResetPct,
