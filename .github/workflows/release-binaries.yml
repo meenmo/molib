@@ -1,4 +1,4 @@
-name: Release parswapspread, parswaprate, aswspread, ktbfutures & bondkrd
+name: Release parswapspread, parswaprate, aswspread, ktbfutures, bondkrd & bootstrap
 
 on:
   push:
@@ -31,12 +31,13 @@ jobs:
           go build -trimpath -ldflags="-s -w" -o dist/aswspread-linux-amd64 ./cmd/aswspread
           go build -trimpath -ldflags="-s -w" -o dist/ktbfutures-linux-amd64 ./cmd/ktbfutures
           go build -trimpath -ldflags="-s -w" -o dist/bondkrd-linux-amd64 ./cmd/bondkrd
+          go build -trimpath -ldflags="-s -w" -o dist/bootstrap-linux-amd64 ./cmd/bootstrap
           ./dist/parswapspread-linux-amd64 -h
           ./dist/parswaprate-linux-amd64 -h
           ./dist/aswspread-linux-amd64 -h
           ./dist/ktbfutures-linux-amd64 -h
           ./dist/bondkrd-linux-amd64 -h
-
+          ./dist/bootstrap-linux-amd64 -h
       - name: Get next version
         id: version
         run: |
@@ -67,9 +68,10 @@ jobs:
           set -euo pipefail
           gh release create "${{ steps.version.outputs.version }}" \
             --title "molib tools ${{ steps.version.outputs.version }}" \
-            --notes "Release ${{ steps.version.outputs.version }} (parswapspread + parswaprate + aswspread + ktbfutures + bondkrd) from commit ${GITHUB_SHA}" \
+            --notes "Release ${{ steps.version.outputs.version }} (parswapspread + parswaprate + aswspread + ktbfutures + bondkrd + bootstrap) from commit ${GITHUB_SHA}" \
             dist/parswapspread-linux-amd64 \
             dist/parswaprate-linux-amd64 \
             dist/aswspread-linux-amd64 \
             dist/ktbfutures-linux-amd64 \
-            dist/bondkrd-linux-amd64
+            dist/bondkrd-linux-amd64 \
+            dist/bootstrap-linux-amd64
