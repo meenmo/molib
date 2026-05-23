@@ -1,32 +1,49 @@
 package curve
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
 
-// tenorToYears converts tenor strings like "1W", "3M", "10Y" to year fractions.
+// ParseTenorYears converts tenor strings like "1W", "3M", "10Y" to year fractions.
+func ParseTenorYears(tenor string) (float64, error) {
+	t := strings.TrimSpace(strings.ToUpper(tenor))
+	if t == "" {
+		return 0, fmt.Errorf("empty tenor")
+	}
+	parse := func(s string) (float64, error) { return strconv.ParseFloat(s, 64) }
+	switch {
+	case strings.HasSuffix(t, "W"):
+		v, err := parse(strings.TrimSuffix(t, "W"))
+		if err != nil {
+			return 0, err
+		}
+		return v * 7.0 / 365.0, nil
+	case strings.HasSuffix(t, "M"):
+		v, err := parse(strings.TrimSuffix(t, "M"))
+		if err != nil {
+			return 0, err
+		}
+		return v / 12.0, nil
+	case strings.HasSuffix(t, "Y"):
+		return parse(strings.TrimSuffix(t, "Y"))
+	case strings.HasSuffix(t, "D"):
+		v, err := parse(strings.TrimSuffix(t, "D"))
+		if err != nil {
+			return 0, err
+		}
+		return v / 365.0, nil
+	default:
+		return parse(t)
+	}
+}
+
+// tenorToYears preserves the historical forgiving parser used by curve builders.
 func tenorToYears(tenor string) float64 {
-	tenor = strings.TrimSpace(strings.ToUpper(tenor))
-	if strings.HasSuffix(tenor, "W") {
-		v, _ := strconv.Atoi(strings.TrimSuffix(tenor, "W"))
-		return float64(v) * 7.0 / 365.0
+	years, err := ParseTenorYears(tenor)
+	if err != nil {
+		return 0
 	}
-	if strings.HasSuffix(tenor, "M") {
-		v, _ := strconv.Atoi(strings.TrimSuffix(tenor, "M"))
-		return float64(v) / 12.0
-	}
-	if strings.HasSuffix(tenor, "Y") {
-		v, _ := strconv.Atoi(strings.TrimSuffix(tenor, "Y"))
-		return float64(v)
-	}
-	if strings.HasSuffix(tenor, "D") {
-		v, _ := strconv.Atoi(strings.TrimSuffix(tenor, "D"))
-		return float64(v) / 365.0
-	}
-	// default attempt parse as years
-	if v, err := strconv.ParseFloat(tenor, 64); err == nil {
-		return v
-	}
-	return 0
+	return years
 }

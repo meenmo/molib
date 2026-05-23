@@ -12,7 +12,6 @@ import (
 
 	"github.com/meenmo/molib/instruments/swaps"
 	"github.com/meenmo/molib/swap"
-	"github.com/meenmo/molib/swap/market"
 )
 
 // PricingInput defines the JSON input schema for basis swap pricing.
@@ -43,16 +42,6 @@ type PricingOutput struct {
 	EffectiveDate string  `json:"effective_date"`
 	MaturityDate  string  `json:"maturity_date"`
 	Error         string  `json:"error,omitempty"`
-}
-
-// legConventions maps string identifiers to LegConvention.
-var legConventions = map[string]market.LegConvention{
-	"TIBOR6M":   swaps.TIBOR6MFloating,
-	"TIBOR3M":   swaps.TIBOR3MFloating,
-	"TONAR":     swaps.TONARFloating,
-	"EURIBOR6M": swaps.EURIBOR6MFloating,
-	"EURIBOR3M": swaps.EURIBOR3MFloating,
-	"ESTR":      swaps.ESTRFloating,
 }
 
 func main() {
@@ -186,17 +175,17 @@ func calculateSpread(input PricingInput) (*PricingOutput, error) {
 		return nil, fmt.Errorf("invalid trade_date: %v", err)
 	}
 
-	payLeg, ok := legConventions[input.PayLeg]
+	payLeg, ok := swaps.FloatingLegByIndex(input.PayLeg)
 	if !ok {
 		return nil, fmt.Errorf("unknown pay_leg: %s", input.PayLeg)
 	}
 
-	recLeg, ok := legConventions[input.RecLeg]
+	recLeg, ok := swaps.FloatingLegByIndex(input.RecLeg)
 	if !ok {
 		return nil, fmt.Errorf("unknown rec_leg: %s", input.RecLeg)
 	}
 
-	oisLeg, ok := legConventions[input.OISIndex]
+	oisLeg, ok := swaps.FloatingLegByIndex(input.OISIndex)
 	if !ok {
 		return nil, fmt.Errorf("unknown ois_index: %s", input.OISIndex)
 	}
