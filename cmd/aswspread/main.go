@@ -278,6 +278,8 @@ func floatLegFromFixture(fixture aswFixture) (market.LegConvention, error) {
 
 func floatLegFromString(value string) (market.LegConvention, error) {
 	switch value {
+	case "AONIA", "AONIAFloating", "RBACOR":
+		return swaps.AONIAFloating, nil
 	case "ESTR", "ESTRFloating":
 		return swaps.ESTRFloating, nil
 	case "EURIBOR3M", "EURIBOR3MFloating":

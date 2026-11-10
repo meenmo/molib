@@ -238,6 +238,8 @@ func withoutPrincipal(leg market.LegConvention) market.LegConvention {
 
 func floatLegFromString(value string) (market.LegConvention, error) {
 	switch strings.TrimSpace(value) {
+	case "AONIA", "AONIAFloating", "RBACOR":
+		return swaps.AONIAFloating, nil
 	case "ESTR", "ESTRFloating":
 		return swaps.ESTRFloating, nil
 	case "SOFR", "SOFRFloating":
@@ -251,6 +253,8 @@ func floatLegFromString(value string) (market.LegConvention, error) {
 
 func fixedLegFromOISIndex(value string) (market.LegConvention, error) {
 	switch strings.TrimSpace(value) {
+	case "AONIA", "AONIAFloating", "RBACOR":
+		return swaps.AONIAFixed, nil
 	case "ESTR", "ESTRFloating":
 		return swaps.ESTRFixed, nil
 	case "SOFR", "SOFRFloating":

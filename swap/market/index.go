@@ -4,6 +4,7 @@ package market
 type ReferenceIndex string
 
 const (
+	AONIA     ReferenceIndex = "AONIA"
 	ESTR      ReferenceIndex = "ESTR"
 	EURIBOR3M ReferenceIndex = "EURIBOR3M"
 	EURIBOR6M ReferenceIndex = "EURIBOR6M"
@@ -19,7 +20,7 @@ const (
 // IsOvernight reports whether the reference rate is an overnight index used in OIS discounting/projection.
 func IsOvernight(r ReferenceIndex) bool {
 	switch r {
-	case ESTR, TONAR, SOFR, SONIA:
+	case ESTR, TONAR, SOFR, SONIA, AONIA:
 		return true
 	default:
 		return false

@@ -88,6 +88,37 @@ var (
 		ScheduleDirection:       market.ScheduleBackward,
 	}
 
+	AONIAFixed = market.LegConvention{
+		LegType:               market.LegFixed,
+		DayCount:              market.Act365F,
+		PayFrequency:          market.FreqAnnual,
+		FixingLagDays:         0,
+		PayDelayDays:          2,
+		BusinessDayAdjustment: market.ModifiedFollowing,
+		RollConvention:        market.BackwardEOM,
+		Calendar:              calendar.AU,
+		ScheduleDirection:     market.ScheduleBackward,
+	}
+
+	AONIAFloating = market.LegConvention{
+		LegType:                 market.LegFloating,
+		ReferenceIndex:          market.AONIA,
+		DayCount:                market.Act365F,
+		ResetFrequency:          market.FreqDaily,
+		PayFrequency:            market.FreqAnnual,
+		FixingLagDays:           0,
+		PayDelayDays:            2,
+		BusinessDayAdjustment:   market.ModifiedFollowing,
+		RollConvention:          market.BackwardEOM,
+		Calendar:                calendar.AU,
+		FixingCalendar:          calendar.AU,
+		ResetPosition:           market.ResetInArrears,
+		RateCutoffDays:          1,
+		IncludeInitialPrincipal: true,
+		IncludeFinalPrincipal:   true,
+		ScheduleDirection:       market.ScheduleBackward,
+	}
+
 	SONIAFixed = market.LegConvention{
 		LegType:               market.LegFixed,
 		DayCount:              market.Act365F,
@@ -356,3 +387,6 @@ var (
 		FloatLeg: SONIAFloating,
 	}
 )
+
+// OISAONIA is the AUD fixed versus overnight cash rate swap.
+var OISAONIA = OISPreset{FixedLeg: AONIAFixed, FloatLeg: AONIAFloating}

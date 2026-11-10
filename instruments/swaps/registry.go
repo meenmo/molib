@@ -26,6 +26,8 @@ type BootstrapConfig struct {
 // FloatingLegByIndex returns a copy of the floating-leg convention for index.
 func FloatingLegByIndex(index string) (market.LegConvention, bool) {
 	switch normalizeIndex(index) {
+	case "AONIA", "RBACOR":
+		return AONIAFloating, true
 	case "ESTR":
 		return ESTRFloating, true
 	case "SOFR":
@@ -54,6 +56,8 @@ func FloatingLegByIndex(index string) (market.LegConvention, bool) {
 // FixedLegByIndex returns a copy of the standard fixed leg paired with index.
 func FixedLegByIndex(index string) (market.LegConvention, bool) {
 	switch normalizeIndex(index) {
+	case "AONIA", "RBACOR":
+		return AONIAFixed, true
 	case "ESTR":
 		return ESTRFixed, true
 	case "SOFR":
@@ -91,6 +95,8 @@ func FixedFloatLegsByIndex(index string) (market.LegConvention, market.LegConven
 // BootstrapConfigByIndex returns the bootstrap metadata for a supported curve index.
 func BootstrapConfigByIndex(index string) (BootstrapConfig, bool) {
 	switch normalizeIndex(index) {
+	case "AONIA", "RBACOR":
+		return BootstrapConfig{Calendar: calendar.AU, SpotLag: 1, Kind: BootstrapOIS}, true
 	case "ESTR":
 		return BootstrapConfig{Calendar: calendar.TARGET, SpotLag: 2, Kind: BootstrapOIS}, true
 	case "SOFR":

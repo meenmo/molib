@@ -103,3 +103,60 @@ $$K_{par} = \frac{PV_{ois}}{N\mathcal{A}_{fix}} \approx \frac{D(T_0)-D(T_M)}{\ma
 - **Conventions/presets:** [`instruments/swaps/conventions.go`](../../instruments/swaps/conventions.go)
 - **CLI (NPV runner):** `cmd/npv` (subcommand: `ois`) in [`cmd/npv/main.go`](../../cmd/npv/main.go)
   - Sample input: `cmd/npv/testdata/ois.json`
+
+### AUD AONIA OIS
+
+Use `AONIA` (alias `RBACOR`, the Bloomberg index ticker is `RBACOR Index`)
+for the AUD overnight cash rate swap. This adds OIS support; AUD BBSW IRS
+conventions are not supplied.
+
+Conventions transcribed from the supplied Bloomberg AUD SWAP-OIS screens:
+
+| Setting | Fixed leg | Floating leg |
+| --- | --- | --- |
+| Day count | ACT/365F | ACT/365F |
+| Payment frequency | Annual | Annual |
+| Business day adjustment | Modified Following | Modified Following |
+| Roll / generation | Backward EOM | Backward EOM |
+| Payment delay | 2 AU business days | 2 AU business days |
+| Reset | — | Daily, in arrears |
+| Fixing lag / rate cutoff | — | 0 / 1 AU business day |
+| Calculation / fixing calendar | AU | AU / AU |
+
+Settlement is T+1 AU business day. Both accrual boundaries and payment dates
+are adjusted. Spreads are added outside the projected overnight return
+(the screen's “Excl Sprd”). Go presets are `swaps.AONIAFixed`,
+`swaps.AONIAFloating`, and `swaps.OISAONIA`. As with existing presets,
+remove principal flags for a vanilla coupon-only OIS when using the Go API;
+the par-rate and OIS NPV CLIs already do so.
+
+`calendar.AU` implements Sydney banking holidays, including the August Bank
+Holiday and October Labour Day, and known 2022/2026/2027 exceptional holidays.
+Rules: [NSW public holidays](https://www.nsw.gov.au/about-nsw/public-holidays).
+[RITS operating days](https://www.rba.gov.au/payments-and-infrastructure/rits/business-hours.html)
+are a different calendar. Future one-off holidays require maintenance. This
+calendar has not been reconciled against Bloomberg's licensed AU calendar.
+
+Example bootstrap input (illustrative quotes, not a market snapshot):
+
+```json
+{
+  "curve_date": "2026-11-10",
+  "currency": "AUD",
+  "index": "AONIA",
+  "curve_quotes": {"1M": 4.1, "1Y": 4.2, "2Y": 4.3, "5Y": 4.6895}
+}
+```
+
+Run `go run ./cmd/bootstrap -input input.json`. The default settlement date
+is `2026-11-11`. For `cmd/parswaprate`, set `floating_rate_index` to `AONIA`;
+for `cmd/npv ois`, set `ois_index` to `AONIA`.
+
+Validation covers registry settings, holiday/payment/cutoff dates, T+1 trade
+construction, bootstrap diagnostics and par-rate solving. The existing engine
+projects overnight coupons from period DF ratios; the cutoff is schedule
+metadata, not a daily historical fixing/lockout calculation. Its sequential
+bootstrap uses the existing delayed-payment approximation; the illustrative
+curve has repricing drift below 0.05 bp. Bloomberg price/NPV parity has not
+been established from these convention screens alone.
+
