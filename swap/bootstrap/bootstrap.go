@@ -64,7 +64,7 @@ func BootstrapParSwapCurve(in Request) (*Result, error) {
 	idx := strings.ToUpper(strings.TrimSpace(in.Index))
 	cfg, ok := swaps.BootstrapConfigByIndex(idx)
 	if !ok {
-		return nil, fmt.Errorf("unknown index: %q (supported: ESTR, SOFR, TONAR, SONIA, HIBOR3M, EURIBOR3M, EURIBOR6M, CD91D)", in.Index)
+		return nil, fmt.Errorf("unknown index: %q (supported: ESTR, SOFR, TONAR, SONIA, AONIA, HIBOR3M, EURIBOR3M, EURIBOR6M, CD91D)", in.Index)
 	}
 
 	curveDate, err := time.Parse("2006-01-02", in.CurveDate)

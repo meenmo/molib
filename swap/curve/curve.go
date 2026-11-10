@@ -294,7 +294,7 @@ func (c *Curve) buildOISCoupons(maturity time.Time) []oisCoupon {
 	payDelay := 0
 	accrualDC := "ACT/365F" // Default
 
-	if c.cal == calendar.JP {
+	if c.cal == calendar.JP || c.cal == calendar.AU {
 		payDelay = 2
 		accrualDC = "ACT/365F"
 	} else if c.cal == calendar.FD || c.cal == calendar.GT {

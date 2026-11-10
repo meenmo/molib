@@ -6,6 +6,7 @@ import "time"
 type CalendarID string
 
 const (
+	AU     CalendarID = "AU" // Sydney banking calendar
 	TARGET CalendarID = "TARGET"
 	JP     CalendarID = "JPN"
 	FD     CalendarID = "FD" // Federal Reserve (Fedwire-style) calendar
@@ -38,6 +39,8 @@ var hkHolidays map[string]struct{} // populated in hongkong.go init()
 func isHoliday(cal CalendarID, t time.Time) bool {
 	key := t.Format("2006-01-02")
 	switch cal {
+	case AU:
+		return isAustralianHoliday(t)
 	case TARGET:
 		_, ok := targetHolidays[key]
 		return ok

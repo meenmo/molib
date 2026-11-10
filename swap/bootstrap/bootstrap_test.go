@@ -169,3 +169,20 @@ func estrRequest() Request {
 		},
 	}
 }
+
+// The existing sequential OIS bootstrap approximates delayed coupons; allow
+// 0.05 bp of repricing drift after later pillars are added.
+func TestBootstrapAONIA(t *testing.T) {
+	out, err := BootstrapParSwapCurve(Request{CurveDate: "2026-11-10", Currency: "AUD", Index: "AONIA", CurveQuotes: map[string]float64{"1M": 4.1, "1Y": 4.2, "2Y": 4.3, "5Y": 4.6895}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.SettlementDate != "2026-11-11" {
+		t.Fatalf("settlement = %s", out.SettlementDate)
+	}
+	for _, n := range out.Nodes {
+		if n.DF <= 0 || math.Abs(n.RepricingErrorBP) > 0.05 {
+			t.Errorf("invalid node: %+v", n)
+		}
+	}
+}

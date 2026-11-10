@@ -166,7 +166,7 @@ func usage() {
 	fmt.Println("  parswaprate -input /path/to/input.json")
 	fmt.Println()
 	fmt.Println("Read JSON input, calculate par swap rate, output JSON to stdout.")
-	fmt.Println("Supported floating_rate_index: TONAR, ESTR, SOFR, SONIA, HIBOR3M, CD91D.")
+	fmt.Println("Supported floating_rate_index: TONAR, ESTR, SOFR, SONIA, AONIA, HIBOR3M, CD91D.")
 	fmt.Println()
 	fmt.Println("Common fields:")
 	fmt.Println(`  curve_date, trade_date, effective_date, maturity_date  (YYYY-MM-DD)`)
@@ -263,7 +263,7 @@ func calculateParRate(input PricingInput) (*PricingOutput, error) {
 
 	fixedLeg, floatLeg, ok := parRateLegs(input.FloatingRateIndex)
 	if !ok {
-		return nil, fmt.Errorf("unknown floating_rate_index: %s (must be TONAR, ESTR, SOFR, SONIA, HIBOR3M, EURIBOR3M, EURIBOR6M, or CD91D)", input.FloatingRateIndex)
+		return nil, fmt.Errorf("unknown floating_rate_index: %s (must be TONAR, ESTR, SOFR, SONIA, AONIA, HIBOR3M, EURIBOR3M, EURIBOR6M, or CD91D)", input.FloatingRateIndex)
 	}
 
 	if input.CurveQuotes == nil || len(input.CurveQuotes) == 0 {

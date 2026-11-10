@@ -345,12 +345,17 @@ func legPV(
 		}
 		totalPV += sign * spec.Notional * discCurve.DF(spec.EffectiveDate)
 	}
-	if leg.IncludeFinalPrincipal && !spec.MaturityDate.Before(valuationDate) {
+	// Final principal settles with the final coupon, including any payment lag.
+	finalPaymentDate := spec.MaturityDate
+	if len(periods) > 0 {
+		finalPaymentDate = periods[len(periods)-1].PayDate
+	}
+	if leg.IncludeFinalPrincipal && !finalPaymentDate.Before(valuationDate) {
 		sign := 1.0
 		if isPayLeg {
 			sign = -1.0
 		}
-		totalPV += sign * spec.Notional * discCurve.DF(spec.MaturityDate)
+		totalPV += sign * spec.Notional * discCurve.DF(finalPaymentDate)
 	}
 
 	return totalPV, nil

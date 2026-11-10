@@ -33,6 +33,9 @@ func GetDayCountConvention(cal calendar.CalendarID) DayCountConvention {
 			FixedFreqMonths: 12,
 		}
 
+	case calendar.AU:
+		return DayCountConvention{OIS: "ACT/365F", FloatIBOR: "ACT/365F", FixedIBOR: "ACT/365F", FixedFreqMonths: 12}
+
 	case calendar.JP:
 		// JPY conventions:
 		// - OIS (TONAR): ACT/365F

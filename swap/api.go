@@ -149,6 +149,9 @@ func InterestRateSwap(params InterestRateSwapParams) (*SwapTrade, error) {
 	spotLag := params.SpotLagDays
 	if spotLag == 0 {
 		spotLag = defaultSpotLagDays(params.ClearingHouse)
+		if params.DiscountingOIS.ReferenceIndex == market.AONIA {
+			spotLag = 1
+		}
 	}
 
 	var spot, effective, maturity time.Time
